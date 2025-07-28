@@ -12,7 +12,7 @@ The `magnet-uri` must be provided in quotes ("").
 $ tori <magnet-uri> <path>
 ```
 
-![](Docs/Demo.gif)
+![](Docs/demo.gif)
 
 ## Installing
 
