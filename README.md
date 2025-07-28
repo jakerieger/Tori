@@ -12,6 +12,8 @@ The `magnet-uri` must be provided in quotes ("").
 $ tori <magnet-uri> <path>
 ```
 
+![](Docs/Demo.gif)
+
 ## Installing
 
 You can check out the [Releases](https://github.com/jakerieger/Tori/releases) page for platform
