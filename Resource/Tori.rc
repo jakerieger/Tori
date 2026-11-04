@@ -1,0 +1,6 @@
+#include "Resource.h"
+
+// The first icon is the one Explorer shows for Tori.exe
+IDI_TORI ICON "icon.ico"
+
+IDR_LOGO RCDATA "logo.svg"
