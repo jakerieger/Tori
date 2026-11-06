@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "UI/Actions.hpp"
 
 #include "Core/Utf8.hpp"
@@ -66,18 +80,19 @@ namespace Tori::UI {
             if (Action) { Action(); }
         };
 
-        State.ActiveDialog = ShowDialog(*State.Overlay,
-                                        State.Popup,
-                                        Dialog {
-                                          .Title   = std::move(Title),
-                                          .Content = Text {.Content = std::move(Message)},
-                                          .Actions =
-                                            {
-                                              DialogAction {.Label = "Cancel", .OnPressed = Close},
-                                              DialogAction {.Label = std::move(ConfirmLabel), .OnPressed = Accept, .Variant = ButtonVariant::Primary},
-                                            },
-                                          .OnDismiss = Close,
-                                        });
+        State.ActiveDialog = ShowDialog(
+          *State.Overlay,
+          State.Popup,
+          Dialog {
+            .Title   = std::move(Title),
+            .Content = Text {.Content = std::move(Message)},
+            .Actions =
+              {
+                DialogAction {.Label = "Cancel", .OnPressed = Close},
+                DialogAction {.Label = std::move(ConfirmLabel), .OnPressed = Accept, .Variant = ButtonVariant::Primary},
+              },
+            .OnDismiss = Close,
+          });
     }
 
     void AddTorrentFiles(ToriState& State, const std::vector<std::filesystem::path>& Files) {
@@ -147,11 +162,12 @@ namespace Tori::UI {
 
         const std::shared_ptr<TorrentEntry> Entry = FindEntry(State, Id);
         const std::string Name                    = Entry ? Entry->Name.Peek() : std::string("this torrent");
-        Confirm(State,
-                "Delete downloaded files?",
-                std::format("\"{}\" will be removed from Tori and its downloaded files deleted. This can't be undone.", Name),
-                "Remove and Delete",
-                [Engine = State.Engine, Id] { Engine->RemoveTorrent(Id, true); });
+        Confirm(
+          State,
+          "Delete downloaded files?",
+          std::format("\"{}\" will be removed from Tori and its downloaded files deleted. This can't be undone.", Name),
+          "Remove and Delete",
+          [Engine = State.Engine, Id] { Engine->RemoveTorrent(Id, true); });
     }
 
     void OpenTorrentFolder(const ToriState& State, const TorrentId Id) {
@@ -177,7 +193,9 @@ namespace Tori::UI {
         Link.Hash        = Entry->Hash;
         Link.DisplayName = Entry->Name.Peek();
         if (const std::shared_ptr<const TorrentDetails> Details = State.Details.Peek(); Details && Details->Id == Id) {
-            for (const TrackerStatus& Tracker : Details->Trackers) { Link.Trackers.push_back(Tracker.Url); }
+            for (const TrackerStatus& Tracker : Details->Trackers) {
+                Link.Trackers.push_back(Tracker.Url);
+            }
         }
         XenUI::Clipboard::SetText(Link.ToString());
     }
@@ -192,10 +210,16 @@ namespace Tori::UI {
         return {
           MenuItem {.Label = "Pause", .OnSelect = [State, Id] { PauseTorrent(*State, Id); }, .Enabled = CanPause},
           MenuItem {.Label = "Resume", .OnSelect = [State, Id] { ResumeTorrent(*State, Id); }, .Enabled = CanResume},
-          MenuItem {.Label = "Force Recheck", .OnSelect = [State, Id] { RecheckTorrent(*State, Id); }, .Enabled = Exists},
+          MenuItem {.Label    = "Force Recheck",
+                    .OnSelect = [State, Id] { RecheckTorrent(*State, Id); },
+                    .Enabled  = Exists},
           MenuItem::Divider(),
-          MenuItem {.Label = "Open Containing Folder", .OnSelect = Deferred([State, Id] { OpenTorrentFolder(*State, Id); }), .Enabled = Exists},
-          MenuItem {.Label = "Copy Magnet Link", .OnSelect = [State, Id] { CopyMagnetLink(*State, Id); }, .Enabled = Exists},
+          MenuItem {.Label    = "Open Containing Folder",
+                    .OnSelect = Deferred([State, Id] { OpenTorrentFolder(*State, Id); }),
+                    .Enabled  = Exists},
+          MenuItem {.Label    = "Copy Magnet Link",
+                    .OnSelect = [State, Id] { CopyMagnetLink(*State, Id); },
+                    .Enabled  = Exists},
           MenuItem::Divider(),
           MenuItem {
             .Label        = "Remove",

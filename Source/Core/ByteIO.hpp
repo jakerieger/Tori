@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #pragma once
 
 #include "Core/Error.hpp"
@@ -16,7 +30,9 @@ namespace Tori {
         void WriteU32(const std::uint32_t Value) { WriteBigEndian(Value, 4); }
         void WriteU64(const std::uint64_t Value) { WriteBigEndian(Value, 8); }
 
-        void WriteBytes(const std::span<const std::uint8_t> Bytes) { _Data.insert(_Data.end(), Bytes.begin(), Bytes.end()); }
+        void WriteBytes(const std::span<const std::uint8_t> Bytes) {
+            _Data.insert(_Data.end(), Bytes.begin(), Bytes.end());
+        }
         void WriteBytes(const std::string_view Bytes) { _Data.insert(_Data.end(), Bytes.begin(), Bytes.end()); }
 
         [[nodiscard]] const std::vector<std::uint8_t>& Data() const { return _Data; }
@@ -61,7 +77,9 @@ namespace Tori {
         std::uint64_t ReadBigEndian(const std::size_t Bytes) {
             Require(Bytes);
             std::uint64_t Value = 0;
-            for (std::size_t I = 0; I < Bytes; ++I) { Value = (Value << 8) | _Data[_Pos++]; }
+            for (std::size_t I = 0; I < Bytes; ++I) {
+                Value = (Value << 8) | _Data[_Pos++];
+            }
             return Value;
         }
 

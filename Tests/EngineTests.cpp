@@ -1,3 +1,4 @@
+#include "Core/Version.hpp"
 #include "Dht/DhtNode.hpp"
 #include "Engine/Session.hpp"
 #include "Meta/MagnetUri.hpp"
@@ -325,7 +326,7 @@ TEST_CASE("Details list the peers a torrent is connected to") {
           return Details && !Details->Peers.empty();
       },
       10s));
-    CHECK(Details->Peers.front().Client == "Tori 0.1");
+    CHECK(Details->Peers.front().Client == kClientName);
     CHECK(Details->Peers.front().Flags.find('I') != std::string::npos);  // The leecher connected to us
     CHECK(Details->Files.size() == 3);
 }

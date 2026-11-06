@@ -1,0 +1,39 @@
+// The version resource Explorer shows on a file's Details tab. Included by each module's .rc after it defines:
+//   TORI_FILE_DESCRIPTION   e.g. "Tori BitTorrent client"
+//   TORI_ORIGINAL_FILENAME  e.g. "Tori.exe"
+//   TORI_FILE_TYPE          VFT_APP or VFT_DLL
+#include <winver.h>
+#include "ToriVersion.h"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION    TORI_VERSION_MAJOR, TORI_VERSION_MINOR, TORI_VERSION_PATCH, 0
+ PRODUCTVERSION TORI_VERSION_MAJOR, TORI_VERSION_MINOR, TORI_VERSION_PATCH, 0
+ FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+ FILEFLAGS      VS_FF_DEBUG
+#else
+ FILEFLAGS      0
+#endif
+ FILEOS         VOS_NT_WINDOWS32
+ FILETYPE       TORI_FILE_TYPE
+ FILESUBTYPE    VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",      "Jake Rieger"
+            VALUE "FileDescription",  TORI_FILE_DESCRIPTION
+            VALUE "FileVersion",      TORI_VERSION_STRING
+            VALUE "InternalName",     TORI_ORIGINAL_FILENAME
+            VALUE "LegalCopyright",   "Copyright (C) 2026 Jake Rieger"
+            VALUE "OriginalFilename", TORI_ORIGINAL_FILENAME
+            VALUE "ProductName",      "Tori"
+            VALUE "ProductVersion",   TORI_VERSION_STRING
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

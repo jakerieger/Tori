@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Storage/FileStorage.hpp"
 
 #include "Core/Utf8.hpp"
@@ -23,20 +37,19 @@ namespace Tori {
         }
     }  // namespace
 
-    std::vector<FileSlice> MapByteRange(const std::span<const TorrentFile> Files,
-                                        std::int64_t Offset,
-                                        const std::int64_t Length) {
+    std::vector<FileSlice>
+    MapByteRange(const std::span<const TorrentFile> Files, std::int64_t Offset, const std::int64_t Length) {
         std::vector<FileSlice> Slices;
         if (Length <= 0 || Files.empty()) { return Slices; }
 
         // Last file starting at or before Offset. Any zero-length files sharing that offset come after the file
         // that actually holds the byte, so the loop below skips past them.
-        const auto First = std::ranges::upper_bound(Files, Offset, {}, &TorrentFile::Offset);
+        const auto First  = std::ranges::upper_bound(Files, Offset, {}, &TorrentFile::Offset);
         std::size_t Index = First == Files.begin() ? 0 : static_cast<std::size_t>(First - Files.begin() - 1);
 
         const std::int64_t End = Offset + Length;
         for (; Index < Files.size() && Offset < End; ++Index) {
-            const TorrentFile& File     = Files[Index];
+            const TorrentFile& File    = Files[Index];
             const std::int64_t FileEnd = File.Offset + File.Length;
             if (FileEnd <= Offset) { continue; }
 
@@ -53,7 +66,9 @@ namespace Tori {
 
     FileStorage::FileStorage(std::filesystem::path Destination, std::vector<TorrentFile> Files)
         : _Destination(std::move(Destination)), _Files(std::move(Files)), _Handles(_Files.size()) {
-        for (const TorrentFile& File : _Files) { _TotalSize += File.Length; }
+        for (const TorrentFile& File : _Files) {
+            _TotalSize += File.Length;
+        }
     }
 
     FileStorage::~FileStorage() {
@@ -88,8 +103,9 @@ namespace Tori {
                 if (!ReadFile(File, Out.data(), Chunk, &Transferred, &Overlapped)) {
                     const DWORD Error = GetLastError();
                     if (Error == ERROR_HANDLE_EOF) { return false; }
-                    throw StorageError(
-                      std::format("could not read {}: {}", PathToUtf8(FilePath(Slice.FileIndex)), Win32ErrorMessage(Error)));
+                    throw StorageError(std::format("could not read {}: {}",
+                                                   PathToUtf8(FilePath(Slice.FileIndex)),
+                                                   Win32ErrorMessage(Error)));
                 }
                 if (Transferred != Chunk) { return false; }  // file is shorter than the torrent says
                 Out = Out.subspan(Chunk);
@@ -116,8 +132,9 @@ namespace Tori {
                 OVERLAPPED Overlapped = OffsetOverlapped(Position);
                 DWORD Transferred     = 0;
                 if (!WriteFile(File, In.data(), Chunk, &Transferred, &Overlapped) || Transferred != Chunk) {
-                    throw StorageError(std::format(
-                      "could not write {}: {}", PathToUtf8(FilePath(Slice.FileIndex)), Win32ErrorMessage(GetLastError())));
+                    throw StorageError(std::format("could not write {}: {}",
+                                                   PathToUtf8(FilePath(Slice.FileIndex)),
+                                                   Win32ErrorMessage(GetLastError())));
                 }
                 In = In.subspan(Chunk);
                 Position += Chunk;
@@ -126,7 +143,9 @@ namespace Tori {
     }
 
     void FileStorage::CloseAll() {
-        for (std::size_t I = 0; I < _Handles.size(); ++I) { Close(static_cast<int>(I)); }
+        for (std::size_t I = 0; I < _Handles.size(); ++I) {
+            Close(static_cast<int>(I));
+        }
     }
 
     void* FileStorage::Acquire(const int Index, const bool ForWrite) {
@@ -149,7 +168,7 @@ namespace Tori {
                   std::format("could not create folder for {}: {}", PathToUtf8(Path), Win32ErrorMessage(Ec.value())));
             }
 
-            File = CreateFileW(Native.c_str(),
+            File                  = CreateFileW(Native.c_str(),
                                GENERIC_READ | GENERIC_WRITE,
                                FILE_SHARE_READ | FILE_SHARE_DELETE,
                                nullptr,
@@ -158,7 +177,8 @@ namespace Tori {
                                nullptr);
             const DWORD OpenError = GetLastError();
             if (File == INVALID_HANDLE_VALUE) {
-                throw StorageError(std::format("could not open {}: {}", PathToUtf8(Path), Win32ErrorMessage(OpenError)));
+                throw StorageError(
+                  std::format("could not open {}: {}", PathToUtf8(Path), Win32ErrorMessage(OpenError)));
             }
 
             // Sparse so preallocating a large torrent doesn't write zeros to disk. Best effort: FAT32 can't do it.
@@ -176,7 +196,8 @@ namespace Tori {
                 if (!SetFileInformationByHandle(File, FileEndOfFileInfo, &EndOfFile, sizeof(EndOfFile))) {
                     const DWORD Error = GetLastError();
                     CloseHandle(File);
-                    throw StorageError(std::format("could not allocate {}: {}", PathToUtf8(Path), Win32ErrorMessage(Error)));
+                    throw StorageError(
+                      std::format("could not allocate {}: {}", PathToUtf8(Path), Win32ErrorMessage(Error)));
                 }
             }
         } else {
@@ -210,7 +231,7 @@ namespace Tori {
     }
 
     void FileStorage::EvictLeastRecentlyUsed() {
-        int Oldest            = -1;
+        int Oldest              = -1;
         std::uint64_t OldestUse = std::numeric_limits<std::uint64_t>::max();
         for (std::size_t I = 0; I < _Handles.size(); ++I) {
             if (_Handles[I].Native && _Handles[I].LastUse < OldestUse) {

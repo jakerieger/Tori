@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "UI/TorrentList.hpp"
 
 #include "Core/Format.hpp"
@@ -131,54 +145,54 @@ namespace Tori::UI {
         return ContextMenu {
           .Items = TorrentMenuItems(State, Id),
           .Child =
-        GestureDetector {
-          .OnTap    = [State = State, Id](const TapEvent&) { State->SelectedTorrent = Id; },
-          .Behavior = HitTestBehavior::Opaque,
-          .Child =
-            Container {
-              .Padding    = EdgeInsets::Symmetric(14.0f, 0.0f),
-              .Background = Selected ? Style.Surface : Style.Background,
+            GestureDetector {
+              .OnTap    = [State = State, Id](const TapEvent&) { State->SelectedTorrent = Id; },
+              .Behavior = HitTestBehavior::Opaque,
               .Child =
-                Row {
-                  .Spacing = 14.0f,
-                  .Children =
-                    {
-                      SizedBox {
-                        .Width  = 48.0f,
-                        .Height = 48.0f,
-                        .Child =
-                          Icon {
-                            .Source = kFolderIcon,
-                            .Color  = Style.Text,
-                          },
-                      },
-                      Expanded {
-                        .Child =
-                          Column {
-                            .MainAlignment  = MainAxisAlignment::Center,
-                            .CrossAlignment = CrossAxisAlignment::Start,
-                            .Children =
-                              {
-                                TorrentNameAndPath(Style, Torrent),
-                                Padding {
-                                  .Insets = EdgeInsets::Symmetric(0.0f, 8.0f),
-                                  .Child =
-                                    ProgressBar {
-                                      .Value  = ProgressValue(Torrent),
-                                      .Min    = 0.0f,
-                                      .Max    = 1.0f,
-                                      .Height = 8.0f,
-                                      .Fill   = ProgressFillColor(Style, Torrent.State()),
-                                    },
-                                },
-                                TorrentProgressStats(Style, Torrent),
+                Container {
+                  .Padding    = EdgeInsets::Symmetric(14.0f, 0.0f),
+                  .Background = Selected ? Style.Surface : Style.Background,
+                  .Child =
+                    Row {
+                      .Spacing = 14.0f,
+                      .Children =
+                        {
+                          SizedBox {
+                            .Width  = 48.0f,
+                            .Height = 48.0f,
+                            .Child =
+                              Icon {
+                                .Source = kFolderIcon,
+                                .Color  = Style.Accent,
                               },
                           },
-                      },
+                          Expanded {
+                            .Child =
+                              Column {
+                                .MainAlignment  = MainAxisAlignment::Center,
+                                .CrossAlignment = CrossAxisAlignment::Start,
+                                .Children =
+                                  {
+                                    TorrentNameAndPath(Style, Torrent),
+                                    Padding {
+                                      .Insets = EdgeInsets::Symmetric(0.0f, 8.0f),
+                                      .Child =
+                                        ProgressBar {
+                                          .Value  = ProgressValue(Torrent),
+                                          .Min    = 0.0f,
+                                          .Max    = 1.0f,
+                                          .Height = 8.0f,
+                                          .Fill   = ProgressFillColor(Style, Torrent.State()),
+                                        },
+                                    },
+                                    TorrentProgressStats(Style, Torrent),
+                                  },
+                              },
+                          },
+                        },
                     },
                 },
             },
-        },
         };
     }
 

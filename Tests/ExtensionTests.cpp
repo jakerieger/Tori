@@ -1,5 +1,6 @@
 #include "Core/Error.hpp"
 #include "Core/Sha1.hpp"
+#include "Core/Version.hpp"
 #include "Peer/Extensions.hpp"
 #include "TestUtil.hpp"
 
@@ -14,7 +15,7 @@ TEST_CASE("Extension handshake round-trips") {
     CHECK(WithSize.UtMetadataId == kLocalUtMetadataId);
     CHECK(WithSize.MetadataSize == 1234);
     CHECK(WithSize.ListenPort == 6881);
-    CHECK(WithSize.Client == "Tori 0.1");
+    CHECK(WithSize.Client == kClientName);
 
     const ExtensionHandshake WithoutSize = DecodeExtensionHandshake(EncodeExtensionHandshake(std::nullopt, 1));
     CHECK(WithoutSize.MetadataSize == 0);

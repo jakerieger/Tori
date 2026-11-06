@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #pragma once
 
 #include "Core/ByteIO.hpp"
@@ -57,12 +71,12 @@ namespace Tori {
     std::optional<Handshake> DecodeHandshake(std::span<const std::uint8_t> Data);
 
     struct PeerMessage {
-        bool IsKeepAlive     = false;
-        MessageId Id         = MessageId::Choke;
-        std::uint32_t Index  = 0;  // Have, Request, Cancel, Piece
-        std::uint32_t Begin  = 0;  // Request, Cancel, Piece
-        std::uint32_t Length = 0;  // Request, Cancel
-        std::uint16_t Port   = 0;  // Port
+        bool IsKeepAlive        = false;
+        MessageId Id            = MessageId::Choke;
+        std::uint32_t Index     = 0;  // Have, Request, Cancel, Piece
+        std::uint32_t Begin     = 0;  // Request, Cancel, Piece
+        std::uint32_t Length    = 0;  // Request, Cancel
+        std::uint16_t Port      = 0;  // Port
         std::uint8_t ExtendedId = 0;
         std::vector<std::uint8_t> Payload;  // Bitfield bytes, block data, or extended message body
     };

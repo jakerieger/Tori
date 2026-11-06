@@ -1,8 +1,23 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Peer/Extensions.hpp"
 
 #include "Core/Bencode.hpp"
 #include "Core/Error.hpp"
 #include "Core/Sha1.hpp"
+#include "Core/Version.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -19,7 +34,8 @@ namespace Tori {
             return {Text.begin(), Text.end()};
         }
 
-        std::vector<std::uint8_t> EncodeMetadataHeader(const MetadataMessageType Type, const int Piece, const std::int64_t TotalSize = -1) {
+        std::vector<std::uint8_t>
+        EncodeMetadataHeader(const MetadataMessageType Type, const int Piece, const std::int64_t TotalSize = -1) {
             Bencode::Dict Header = {{"msg_type", static_cast<int>(Type)}, {"piece", Piece}};
             if (TotalSize >= 0) { Header.emplace_back("total_size", TotalSize); }
             return AsBytes(Bencode::Encode(Header));
@@ -32,7 +48,7 @@ namespace Tori {
           {"m", Bencode::Dict {{"ut_metadata", kLocalUtMetadataId}}},
           {"p", ListenPort},
           {"reqq", 250},
-          {"v", "Tori 0.1"},
+          {"v", kClientName},
         };
         if (MetadataSize) { Handshake.emplace_back("metadata_size", *MetadataSize); }
         return AsBytes(Bencode::Encode(Handshake));
@@ -49,7 +65,9 @@ namespace Tori {
                 Result.UtMetadataId = static_cast<std::uint8_t>(*Id);
             }
         }
-        if (const Bencode::Integer* Size = Root.FindInteger("metadata_size"); Size && *Size > 0) { Result.MetadataSize = *Size; }
+        if (const Bencode::Integer* Size = Root.FindInteger("metadata_size"); Size && *Size > 0) {
+            Result.MetadataSize = *Size;
+        }
         if (const Bencode::Integer* Port = Root.FindInteger("p"); Port && *Port > 0 && *Port < 65536) {
             Result.ListenPort = static_cast<std::uint16_t>(*Port);
         }
@@ -61,9 +79,8 @@ namespace Tori {
         return EncodeMetadataHeader(MetadataMessageType::Request, Piece);
     }
 
-    std::vector<std::uint8_t> EncodeMetadataData(const int Piece,
-                                                 const std::int64_t TotalSize,
-                                                 const std::span<const std::uint8_t> Data) {
+    std::vector<std::uint8_t>
+    EncodeMetadataData(const int Piece, const std::int64_t TotalSize, const std::span<const std::uint8_t> Data) {
         std::vector<std::uint8_t> Message = EncodeMetadataHeader(MetadataMessageType::Data, Piece, TotalSize);
         Message.insert(Message.end(), Data.begin(), Data.end());
         return Message;
@@ -74,8 +91,8 @@ namespace Tori {
     }
 
     MetadataMessage DecodeMetadataMessage(const std::span<const std::uint8_t> Payload) {
-        std::size_t Consumed      = 0;
-        const Bencode::Value Root = Bencode::DecodePrefix(AsChars(Payload), Consumed);
+        std::size_t Consumed          = 0;
+        const Bencode::Value Root     = Bencode::DecodePrefix(AsChars(Payload), Consumed);
         const Bencode::Integer* Type  = Root.FindInteger("msg_type");
         const Bencode::Integer* Piece = Root.FindInteger("piece");
         if (!Type || !Piece || *Type < 0 || *Type > 2 || *Piece < 0 || *Piece > INT32_MAX) {
@@ -109,7 +126,8 @@ namespace Tori {
 
     std::optional<int> MetadataAssembler::NextRequest(const Clock::time_point Now) {
         for (std::size_t Piece = 0; Piece < _Have.size(); ++Piece) {
-            const bool Pending = _RequestedAt[Piece] != Clock::time_point {} && Now - _RequestedAt[Piece] < kMetadataRequestTimeout;
+            const bool Pending =
+              _RequestedAt[Piece] != Clock::time_point {} && Now - _RequestedAt[Piece] < kMetadataRequestTimeout;
             if (!_Have[Piece] && !Pending) {
                 _RequestedAt[Piece] = Now;
                 return static_cast<int>(Piece);
@@ -119,7 +137,9 @@ namespace Tori {
     }
 
     void MetadataAssembler::Received(const int Piece, const std::span<const std::uint8_t> Data) {
-        if (Piece < 0 || static_cast<std::size_t>(Piece) >= _Have.size() || _Have[static_cast<std::size_t>(Piece)]) { return; }
+        if (Piece < 0 || static_cast<std::size_t>(Piece) >= _Have.size() || _Have[static_cast<std::size_t>(Piece)]) {
+            return;
+        }
 
         const std::int64_t Offset   = static_cast<std::int64_t>(Piece) * kMetadataPieceSize;
         const std::int64_t Expected = std::min<std::int64_t>(kMetadataPieceSize, _Size - Offset);

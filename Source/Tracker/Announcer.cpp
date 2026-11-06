@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Tracker/Announcer.hpp"
 
 #include "Core/Encoding.hpp"
@@ -17,7 +31,8 @@ namespace Tori {
         }
     }  // namespace
 
-    AnnounceResponse AnnounceToTracker(const std::string& Url, const AnnounceRequest& Request, const std::stop_token Stop) {
+    AnnounceResponse
+    AnnounceToTracker(const std::string& Url, const AnnounceRequest& Request, const std::stop_token Stop) {
         if (StartsWithIgnoreCase(Url, "http://") || StartsWithIgnoreCase(Url, "https://")) {
             return HttpAnnounce(Url, Request, Stop);
         }
@@ -52,9 +67,12 @@ namespace Tori {
     Announcer::~Announcer() = default;
 
     void Announcer::Tick(const Clock::time_point Now, const TransferTotals& Totals) {
-        for (Tier& Target : _Tiers) { Collect(Target, Now); }
+        for (Tier& Target : _Tiers) {
+            Collect(Target, Now);
+        }
 
-        int InFlight = static_cast<int>(std::ranges::count_if(_Tiers, [](const Tier& T) { return T.InFlight.has_value(); }));
+        int InFlight =
+          static_cast<int>(std::ranges::count_if(_Tiers, [](const Tier& T) { return T.InFlight.has_value(); }));
         for (Tier& Target : _Tiers) {
             if (InFlight >= _Config.MaxConcurrent) { break; }
             if (Target.InFlight || Now < Target.NextAnnounce) { continue; }
@@ -76,7 +94,9 @@ namespace Tori {
 
     void Announcer::ForceReannounce(const Clock::time_point Now) {
         if (_Stopping) { return; }
-        for (Tier& Target : _Tiers) { Target.NextAnnounce = std::max(Now, Target.EarliestForced); }
+        for (Tier& Target : _Tiers) {
+            Target.NextAnnounce = std::max(Now, Target.EarliestForced);
+        }
     }
 
     void Announcer::Stop(const Clock::time_point Now) {
@@ -230,7 +250,8 @@ namespace Tori {
         Target.EarliestForced = Now + std::chrono::seconds(Response.MinIntervalSeconds.value_or(0));
     }
 
-    void Announcer::OnFailure(Tier& Target, const Job& Finished, const std::string& Error, const Clock::time_point Now) {
+    void
+    Announcer::OnFailure(Tier& Target, const Job& Finished, const std::string& Error, const Clock::time_point Now) {
         Tracker& Source = Target.Trackers[Finished.TrackerIndex];
 
         if (_Stopping) {

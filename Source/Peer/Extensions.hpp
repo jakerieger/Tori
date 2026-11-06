@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #pragma once
 
 #include "Core/InfoHash.hpp"
@@ -22,8 +36,8 @@ namespace Tori {
     /// @brief The ID we ask peers to use when sending us ut_metadata messages.
     inline constexpr std::uint8_t kLocalUtMetadataId = 1;
 
-    inline constexpr int kMetadataPieceSize          = 16 * 1024;
-    inline constexpr std::int64_t kMaxMetadataSize   = 16 * 1024 * 1024;
+    inline constexpr int kMetadataPieceSize        = 16 * 1024;
+    inline constexpr std::int64_t kMaxMetadataSize = 16 * 1024 * 1024;
 
     /// @brief What a peer told us in its BEP 10 handshake.
     struct ExtensionHandshake {
@@ -34,7 +48,8 @@ namespace Tori {
     };
 
     /// @brief Our handshake. MetadataSize is the size of the info dictionary, when we have it.
-    std::vector<std::uint8_t> EncodeExtensionHandshake(std::optional<std::int64_t> MetadataSize, std::uint16_t ListenPort);
+    std::vector<std::uint8_t> EncodeExtensionHandshake(std::optional<std::int64_t> MetadataSize,
+                                                       std::uint16_t ListenPort);
 
     /// @brief Throws ParseError if the payload isn't a bencoded dictionary.
     ExtensionHandshake DecodeExtensionHandshake(std::span<const std::uint8_t> Payload);

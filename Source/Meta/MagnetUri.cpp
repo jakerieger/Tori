@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Meta/MagnetUri.hpp"
 
 #include "Core/Encoding.hpp"
@@ -51,7 +65,7 @@ namespace Tori {
                 constexpr std::string_view kBtih = "urn:btih:";
                 if (!StartsWithIgnoreCase(*Decoded, kBtih)) { continue; }  // e.g. urn:btmh (v2), which we skip
 
-                const std::string_view Encoded    = std::string_view(*Decoded).substr(kBtih.size());
+                const std::string_view Encoded     = std::string_view(*Decoded).substr(kBtih.size());
                 const std::optional<InfoHash> Hash = Encoded.size() == 40   ? InfoHash::FromHex(Encoded)
                                                      : Encoded.size() == 32 ? InfoHash::FromBase32(Encoded)
                                                                             : std::nullopt;
@@ -77,9 +91,15 @@ namespace Tori {
     std::string MagnetUri::ToString() const {
         std::string Out = "magnet:?xt=urn:btih:" + Hash.ToHex();
         if (!DisplayName.empty()) { Out += "&dn=" + PercentEncode(DisplayName); }
-        for (const std::string& Tracker : Trackers) { Out += "&tr=" + PercentEncode(Tracker); }
-        for (const std::string& Peer : Peers) { Out += "&x.pe=" + PercentEncode(Peer); }
-        for (const std::string& Seed : WebSeeds) { Out += "&ws=" + PercentEncode(Seed); }
+        for (const std::string& Tracker : Trackers) {
+            Out += "&tr=" + PercentEncode(Tracker);
+        }
+        for (const std::string& Peer : Peers) {
+            Out += "&x.pe=" + PercentEncode(Peer);
+        }
+        for (const std::string& Seed : WebSeeds) {
+            Out += "&ws=" + PercentEncode(Seed);
+        }
         return Out;
     }
 }  // namespace Tori

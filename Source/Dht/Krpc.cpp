@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Dht/Krpc.hpp"
 
 #include "Core/Error.hpp"
@@ -76,8 +90,8 @@ namespace Tori {
 
         switch ((*Type)[0]) {
             case 'q': {
-                const std::string* Method   = Root.FindString("q");
-                const Bencode::Value* Args  = Root.FindDict("a");
+                const std::string* Method  = Root.FindString("q");
+                const Bencode::Value* Args = Root.FindDict("a");
                 if (!Method || !Args) { return std::nullopt; }
                 Message.Type   = KrpcMessage::Kind::Query;
                 Message.Method = *Method;
@@ -111,7 +125,8 @@ namespace Tori {
         return Message;
     }
 
-    std::string EncodeKrpcQuery(const std::string_view Transaction, const std::string_view Method, Bencode::Dict Arguments) {
+    std::string
+    EncodeKrpcQuery(const std::string_view Transaction, const std::string_view Method, Bencode::Dict Arguments) {
         return Bencode::Encode(Bencode::Dict {
           {"t", Transaction},
           {"y", "q"},

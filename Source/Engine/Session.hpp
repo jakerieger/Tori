@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #pragma once
 
 #include "Core/InfoHash.hpp"
@@ -25,13 +39,13 @@ namespace Tori {
     class Torrent;
 
     struct SessionSettings {
-        std::uint16_t ListenPort = 6881;  // Falls back to a random port if taken; 0 always picks one
-        bool LoopbackOnly        = false; // Listen on 127.0.0.1 only (tests)
-        int MaxPeersPerTorrent   = 50;
+        std::uint16_t ListenPort  = 6881;   // Falls back to a random port if taken; 0 always picks one
+        bool LoopbackOnly         = false;  // Listen on 127.0.0.1 only (tests)
+        int MaxPeersPerTorrent    = 50;
         AnnounceFunction Announce = AnnounceToTracker;
 
-        bool EnableDht           = true;  // Uses the listen port's number for UDP
-        bool DhtLoopbackOnly     = false; // Separate from LoopbackOnly: a DHT on loopback can't reach the internet
+        bool EnableDht           = true;   // Uses the listen port's number for UDP
+        bool DhtLoopbackOnly     = false;  // Separate from LoopbackOnly: a DHT on loopback can't reach the internet
         bool DhtUsePublicRouters = true;
         std::vector<Endpoint> DhtBootstrapNodes;
 

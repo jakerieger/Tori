@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #pragma once
 
 #include <chrono>
@@ -10,11 +24,11 @@
 namespace Tori {
     /// @brief What the choker needs to know about one connected peer.
     struct ChokeCandidate {
-        std::uint64_t Key = 0;  // Stable for the life of the connection
-        bool Interested   = false;
-        bool Snubbed      = false;  // Stopped sending us blocks; earns no regular slot while downloading
-        double DownloadRate = 0.0;  // From them, bytes/second
-        double UploadRate   = 0.0;  // To them, bytes/second
+        std::uint64_t Key   = 0;  // Stable for the life of the connection
+        bool Interested     = false;
+        bool Snubbed        = false;  // Stopped sending us blocks; earns no regular slot while downloading
+        double DownloadRate = 0.0;    // From them, bytes/second
+        double UploadRate   = 0.0;    // To them, bytes/second
         std::chrono::steady_clock::time_point Connected;
         std::chrono::steady_clock::time_point LastUnchoked;  // Epoch if never
     };
@@ -30,7 +44,7 @@ namespace Tori {
         using Clock = std::chrono::steady_clock;
 
         struct Settings {
-            int Slots                           = 4;
+            int Slots                          = 4;
             Clock::duration OptimisticInterval = std::chrono::seconds(30);
             Clock::duration NewPeerWindow      = std::chrono::seconds(60);
         };

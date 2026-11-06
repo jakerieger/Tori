@@ -1,10 +1,24 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Core/Encoding.hpp"
 
 namespace Tori {
     namespace {
         constexpr char kHexDigits[]      = "0123456789abcdef";
         constexpr char kUpperHexDigits[] = "0123456789ABCDEF";  // RFC 3986 recommends uppercase escapes
-        constexpr char kBase32Digits[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+        constexpr char kBase32Digits[]   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
         int HexValue(const char C) {
             if (C >= '0' && C <= '9') { return C - '0'; }
@@ -21,8 +35,8 @@ namespace Tori {
         }
 
         bool IsUnreserved(const unsigned char C) {
-            return (C >= 'A' && C <= 'Z') || (C >= 'a' && C <= 'z') || (C >= '0' && C <= '9') || C == '-' ||
-                   C == '.' || C == '_' || C == '~';
+            return (C >= 'A' && C <= 'Z') || (C >= 'a' && C <= 'z') || (C >= '0' && C <= '9') || C == '-' || C == '.' ||
+                   C == '_' || C == '~';
         }
     }  // namespace
 
@@ -63,12 +77,16 @@ namespace Tori {
             }
         }
         if (Bits > 0) { Out += kBase32Digits[(Buffer << (5 - Bits)) & 0x1F]; }
-        while (Out.size() % 8 != 0) { Out += '='; }
+        while (Out.size() % 8 != 0) {
+            Out += '=';
+        }
         return Out;
     }
 
     std::optional<std::vector<std::uint8_t>> Base32Decode(std::string_view Text) {
-        while (!Text.empty() && Text.back() == '=') { Text.remove_suffix(1); }
+        while (!Text.empty() && Text.back() == '=') {
+            Text.remove_suffix(1);
+        }
 
         std::vector<std::uint8_t> Out;
         std::uint32_t Buffer = 0;

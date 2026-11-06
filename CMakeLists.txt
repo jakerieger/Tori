@@ -42,7 +42,11 @@ set(XENUI_BUILD_EXAMPLES OFF)
 FetchContent_MakeAvailable(XenUI)
 
 # BitTorrent engine, as ToriCore.dll. Must not depend on XenUI so it can be tested headless.
+# The version, in project() above, as macros for both C++ (Core/Version.hpp) and the resource compiler
+configure_file(Resource/ToriVersion.h.in "${CMAKE_BINARY_DIR}/Generated/ToriVersion.h" @ONLY)
+
 add_library(ToriCore SHARED
+        Resource/ToriCore.rc
         Source/Core/Bencode.cpp
         Source/Core/Bitfield.cpp
         Source/Core/Encoding.cpp
@@ -68,6 +72,7 @@ add_library(ToriCore SHARED
         Source/Meta/Metainfo.cpp
         Source/Meta/TorrentCreator.cpp
         Source/Net/Endpoint.cpp
+        Source/Net/Http.cpp
         Source/Net/Socket.cpp
         Source/Peer/Extensions.cpp
         Source/Peer/Messages.cpp
@@ -78,11 +83,13 @@ add_library(ToriCore SHARED
         Source/Tracker/HttpTracker.cpp
         Source/Tracker/UdpTracker.cpp
 )
-target_include_directories(ToriCore PUBLIC Source)
-target_compile_definitions(ToriCore PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
-target_compile_options(ToriCore PUBLIC /permissive- /utf-8 PRIVATE /W4)
+target_include_directories(ToriCore PUBLIC Source "${CMAKE_BINARY_DIR}/Generated")
+target_compile_definitions(ToriCore PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE _CRT_SECURE_NO_WARNINGS)
+# C++ only: the resource compiler shares the targets' options and doesn't know these
+target_compile_options(ToriCore
+        PUBLIC $<$<COMPILE_LANGUAGE:CXX>:/permissive-> $<$<COMPILE_LANGUAGE:CXX>:/utf-8>
+        PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/W4>)
 target_link_libraries(ToriCore PUBLIC ws2_32 bcrypt winhttp shell32)
-target_compile_definitions(ToriCore PUBLIC TORI_VERSION="${PROJECT_VERSION}")
 # Every function is exported, so the app, ToriCli and the tests all use the same engine code
 set_target_properties(ToriCore PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 

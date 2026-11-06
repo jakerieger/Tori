@@ -1,0 +1,4 @@
+#define TORI_FILE_DESCRIPTION  "Tori engine"
+#define TORI_ORIGINAL_FILENAME "ToriCore.dll"
+#define TORI_FILE_TYPE         VFT_DLL
+#include "VersionInfo.rc"

@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Core/Bencode.hpp"
 
 #include "Core/Error.hpp"
@@ -25,7 +39,9 @@ namespace Tori::Bencode {
                 } else if (Lead == 'l') {
                     ++_Pos;
                     List Items;
-                    while (Peek() != 'e') { Items.push_back(Parse(Depth + 1)); }
+                    while (Peek() != 'e') {
+                        Items.push_back(Parse(Depth + 1));
+                    }
                     ++_Pos;
                     Result = Value(std::move(Items));
                 } else if (Lead == 'd') {
@@ -77,7 +93,7 @@ namespace Tori::Bencode {
                 if (Magnitude.size() > 1 && Magnitude.front() == '0') { Fail("integer has leading zeros"); }
                 if (Negative && Magnitude == "0") { Fail("negative zero"); }
 
-                Integer Number = 0;
+                Integer Number       = 0;
                 const auto [Ptr, Ec] = std::from_chars(Digits.data(), Digits.data() + Digits.size(), Number);
                 if (Ec != std::errc {}) { Fail("integer out of range"); }
 
@@ -120,11 +136,15 @@ namespace Tori::Bencode {
                 Out += Bytes;
             } else if (Item.IsList()) {
                 Out += 'l';
-                for (const Value& Child : Item.AsList()) { EncodeTo(Child, Out); }
+                for (const Value& Child : Item.AsList()) {
+                    EncodeTo(Child, Out);
+                }
                 Out += 'e';
             } else {
                 std::vector<const Dict::value_type*> Sorted;
-                for (const auto& Entry : Item.AsDict()) { Sorted.push_back(&Entry); }
+                for (const auto& Entry : Item.AsDict()) {
+                    Sorted.push_back(&Entry);
+                }
                 // std::string compares as unsigned bytes, which is the ordering BEP 3 specifies
                 std::ranges::sort(Sorted, {}, [](const Dict::value_type* Entry) -> const std::string& {
                     return Entry->first;

@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Tracker/HttpTracker.hpp"
 
 #include "Core/Bencode.hpp"
@@ -72,7 +86,7 @@ namespace Tori {
 
         std::optional<std::string> FailureReason(const std::string_view Body) {
             try {
-                std::size_t Consumed = 0;
+                std::size_t Consumed      = 0;
                 const Bencode::Value Root = Bencode::DecodePrefix(Body, Consumed);
                 if (const std::string* Reason = Root.FindString("failure reason")) { return *Reason; }
             } catch (const ParseError&) {}
@@ -183,8 +197,11 @@ namespace Tori {
                                     std::wstring(Parts.lpszExtraInfo, Parts.dwExtraInfoLength);
         const bool Secure = Parts.nScheme == INTERNET_SCHEME_HTTPS;
 
-        HttpHandle Session(
-          WinHttpOpen(L"Tori/0.1", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0));
+        HttpHandle Session(WinHttpOpen(L"Tori/0.1",
+                                       WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
+                                       WINHTTP_NO_PROXY_NAME,
+                                       WINHTTP_NO_PROXY_BYPASS,
+                                       0));
         if (!Session) { FailWinHttp(Stop); }
 
         const int TimeoutMs = static_cast<int>(Timeout.count());
@@ -196,10 +213,15 @@ namespace Tori {
         if (!Connection) { FailWinHttp(Stop); }
 
         // The query is already percent-encoded; WinHTTP must not escape it again
-        const DWORD Flags = (Secure ? WINHTTP_FLAG_SECURE : 0) | WINHTTP_FLAG_ESCAPE_DISABLE |
-                            WINHTTP_FLAG_ESCAPE_DISABLE_QUERY;
-        HttpHandle Handle(WinHttpOpenRequest(
-          Connection.Get(), L"GET", Object.c_str(), nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, Flags));
+        const DWORD Flags =
+          (Secure ? WINHTTP_FLAG_SECURE : 0) | WINHTTP_FLAG_ESCAPE_DISABLE | WINHTTP_FLAG_ESCAPE_DISABLE_QUERY;
+        HttpHandle Handle(WinHttpOpenRequest(Connection.Get(),
+                                             L"GET",
+                                             Object.c_str(),
+                                             nullptr,
+                                             WINHTTP_NO_REFERER,
+                                             WINHTTP_DEFAULT_ACCEPT_TYPES,
+                                             Flags));
         if (!Handle) { FailWinHttp(Stop); }
 
         // Closing the request handle from another thread aborts a blocking send or receive

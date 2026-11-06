@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #pragma once
 
 #include "Core/InfoHash.hpp"
@@ -37,7 +51,7 @@ namespace Tori {
         struct Params {
             TorrentId Id = kInvalidTorrentId;
             InfoHash Hash;
-            std::string DisplayName;  // Shown until the metadata's name is known
+            std::string DisplayName;       // Shown until the metadata's name is known
             std::optional<Metainfo> Meta;  // Absent for a magnet link until peers send the metadata
             std::vector<std::vector<std::string>> ExtraTrackers;  // From a magnet link, alongside the metadata's
             std::vector<Endpoint> InitialPeers;                   // From a magnet link's x.pe
@@ -45,8 +59,8 @@ namespace Tori {
             PeerId LocalId {};
             std::uint16_t ListenPort = 0;
             bool StartPaused         = false;
-            std::int64_t AddedOn     = 0;  // Unix time
-            std::vector<int> SkippedFiles;   // Indices into the metadata's files not to download
+            std::int64_t AddedOn     = 0;   // Unix time
+            std::vector<int> SkippedFiles;  // Indices into the metadata's files not to download
             /// @brief State saved by the previous run. Its pieces are trusted without a full check if the files
             /// haven't changed since.
             std::optional<ResumeData> Resume;

@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #pragma once
 
 #include "Meta/Metainfo.hpp"
@@ -57,8 +71,8 @@ namespace Tori {
 
     private:
         struct Handle {
-            void* Native         = nullptr;  // HANDLE, or nullptr while closed
-            bool Writable        = false;
+            void* Native          = nullptr;  // HANDLE, or nullptr while closed
+            bool Writable         = false;
             std::uint64_t LastUse = 0;
         };
 
@@ -70,8 +84,8 @@ namespace Tori {
         std::filesystem::path _Destination;
         std::vector<TorrentFile> _Files;
         std::vector<Handle> _Handles;
-        std::int64_t _TotalSize  = 0;
-        std::uint64_t _UseClock  = 0;
-        std::size_t _OpenCount   = 0;
+        std::int64_t _TotalSize = 0;
+        std::uint64_t _UseClock = 0;
+        std::size_t _OpenCount  = 0;
     };
 }  // namespace Tori

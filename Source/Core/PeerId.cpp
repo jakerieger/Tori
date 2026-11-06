@@ -1,6 +1,21 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Core/PeerId.hpp"
 
 #include "Core/Random.hpp"
+#include "Core/Version.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -9,7 +24,7 @@
 
 namespace Tori {
     PeerId GeneratePeerId() {
-        constexpr std::string_view kPrefix   = "-TO0100-";
+        constexpr std::string_view kPrefix(kPeerIdPrefix.data(), kPeerIdPrefix.size());
         constexpr std::string_view kAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
         PeerId Id {};
@@ -31,10 +46,21 @@ namespace Tori {
         }
 
         static constexpr std::pair<std::string_view, std::string_view> kClients[] = {
-          {"AZ", "Vuze"},        {"BI", "BiglyBT"},      {"BT", "BitTorrent"},   {"DE", "Deluge"},
-          {"FW", "FrostWire"},   {"KT", "KTorrent"},     {"LT", "libtorrent"},   {"lt", "rTorrent"},
-          {"PI", "PicoTorrent"}, {"qB", "qBittorrent"},  {"TO", "Tori"},         {"TR", "Transmission"},
-          {"UT", "µTorrent"}, {"UW", "µTorrent Web"}, {"WW", "WebTorrent"},
+          {"AZ", "Vuze"},
+          {"BI", "BiglyBT"},
+          {"BT", "BitTorrent"},
+          {"DE", "Deluge"},
+          {"FW", "FrostWire"},
+          {"KT", "KTorrent"},
+          {"LT", "libtorrent"},
+          {"lt", "rTorrent"},
+          {"PI", "PicoTorrent"},
+          {"qB", "qBittorrent"},
+          {"TO", "Tori"},
+          {"TR", "Transmission"},
+          {"UT", "µTorrent"},
+          {"UW", "µTorrent Web"},
+          {"WW", "WebTorrent"},
         };
         const std::string_view Code(reinterpret_cast<const char*>(&Id[1]), 2);
         std::string Name(Code);
@@ -48,10 +74,12 @@ namespace Tori {
             const char Digit = static_cast<char>(Id[I]);
             if (!Version.empty()) { Version += '.'; }
             Version += std::isdigit(static_cast<unsigned char>(Digit)) ? std::string(1, Digit)
-                                                                        : std::to_string(std::toupper(Digit) - 'A' + 10);
+                                                                       : std::to_string(std::toupper(Digit) - 'A' + 10);
         }
         // Trailing zero components say nothing ("4.6.5.0" is 4.6.5)
-        while (Version.size() > 2 && Version.ends_with(".0")) { Version.resize(Version.size() - 2); }
+        while (Version.size() > 2 && Version.ends_with(".0")) {
+            Version.resize(Version.size() - 2);
+        }
         return Name + " " + Version;
     }
 }  // namespace Tori

@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "UI/Instance.hpp"
 
 #include <windows.h>
@@ -16,15 +30,16 @@ namespace Tori::UI {
     struct InstanceWindow {
         static LRESULT CALLBACK Proc(const HWND Window, const UINT Message, const WPARAM WParam, const LPARAM LParam) {
             if (Message == WM_COPYDATA) {
-                auto* Channel     = reinterpret_cast<InstanceChannel*>(GetWindowLongPtrW(Window, GWLP_USERDATA));
-                const auto* Copy  = reinterpret_cast<const COPYDATASTRUCT*>(LParam);
-                if (!Channel || !Channel->_OnArguments || Copy->dwData != kMessageTag || Copy->cbData % sizeof(wchar_t) != 0) {
+                auto* Channel    = reinterpret_cast<InstanceChannel*>(GetWindowLongPtrW(Window, GWLP_USERDATA));
+                const auto* Copy = reinterpret_cast<const COPYDATASTRUCT*>(LParam);
+                if (!Channel || !Channel->_OnArguments || Copy->dwData != kMessageTag ||
+                    Copy->cbData % sizeof(wchar_t) != 0) {
                     return FALSE;
                 }
 
                 // Arguments separated by NULs
                 std::vector<std::wstring> Arguments;
-                const auto* Text   = static_cast<const wchar_t*>(Copy->lpData);
+                const auto* Text         = static_cast<const wchar_t*>(Copy->lpData);
                 const std::size_t Length = Copy->cbData / sizeof(wchar_t);
                 std::wstring Current;
                 for (std::size_t I = 0; I < Length; ++I) {
@@ -96,7 +111,8 @@ namespace Tori::UI {
         RegisterClassExW(&Class);
 
         // Message-only: never shown, but findable by class name
-        const HWND Window = CreateWindowExW(0, kWindowClass, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, Module, nullptr);
+        const HWND Window =
+          CreateWindowExW(0, kWindowClass, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, Module, nullptr);
         if (!Window) { return; }
         SetWindowLongPtrW(Window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
         _Window = Window;

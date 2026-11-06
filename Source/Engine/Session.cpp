@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Engine/Session.hpp"
 
 #include "Core/Bencode.hpp"
@@ -23,17 +37,18 @@ namespace Tori {
         using Clock = std::chrono::steady_clock;
         using namespace std::chrono_literals;
 
-        constexpr auto kHandshakeTimeout   = 10s;
-        constexpr std::size_t kMaxPending  = 64;  // Accepted connections still sending their handshake
-        constexpr auto kPollTimeout        = 100ms;
-        constexpr auto kSaveInterval       = 2s;     // Torrents decide what's worth saving; this just writes it
-        constexpr auto kDhtSaveInterval    = 10min;
+        constexpr auto kHandshakeTimeout  = 10s;
+        constexpr std::size_t kMaxPending = 64;  // Accepted connections still sending their handshake
+        constexpr auto kPollTimeout       = 100ms;
+        constexpr auto kSaveInterval      = 2s;  // Torrents decide what's worth saving; this just writes it
+        constexpr auto kDhtSaveInterval   = 10min;
 
         constexpr std::int64_t kMaxResumeFileSize = 16LL * 1024 * 1024;
         constexpr std::size_t kMaxSavedDhtNodes   = 200;
 
         std::int64_t UnixNow() {
-            return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch())
+              .count();
         }
 
         std::filesystem::path DhtStatePath(const std::filesystem::path& Folder) {
@@ -52,7 +67,9 @@ namespace Tori {
                     Settings.Id = Saved;
                 }
                 if (const std::string* Nodes = Root.FindString("nodes")) {
-                    for (const Endpoint& Node : ParseCompactPeers(*Nodes, false)) { Settings.BootstrapNodes.push_back(Node); }
+                    for (const Endpoint& Node : ParseCompactPeers(*Nodes, false)) {
+                        Settings.BootstrapNodes.push_back(Node);
+                    }
                 }
             } catch (const ParseError&) {}
         }
@@ -73,7 +90,11 @@ namespace Tori {
                     UniqueSocket Socket(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
                     if (Socket) {
                         DWORD V6Only = 0;
-                        setsockopt(Socket.Get(), IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&V6Only), sizeof(V6Only));
+                        setsockopt(Socket.Get(),
+                                   IPPROTO_IPV6,
+                                   IPV6_V6ONLY,
+                                   reinterpret_cast<const char*>(&V6Only),
+                                   sizeof(V6Only));
                         sockaddr_in6 Address {};
                         Address.sin6_family = AF_INET6;
                         Address.sin6_addr   = in6addr_any;
@@ -94,7 +115,8 @@ namespace Tori {
                     return Socket;
                 }
             }
-            throw std::runtime_error(std::format("could not listen for peers: {}", Win32ErrorMessage(WSAGetLastError())));
+            throw std::runtime_error(
+              std::format("could not listen for peers: {}", Win32ErrorMessage(WSAGetLastError())));
         }
     }  // namespace
 
@@ -146,9 +168,10 @@ namespace Tori {
             Dht.BootstrapNodes   = _Settings.DhtBootstrapNodes;
             if (!_Settings.StateFolder.empty()) { LoadDhtState(_Settings.StateFolder, Dht); }
             try {
-                _Dht = std::make_unique<DhtNode>(std::move(Dht), [this](const InfoHash& Hash, std::vector<Endpoint> Peers) {
-                    OnDhtPeers(Hash, std::move(Peers));
-                });
+                _Dht =
+                  std::make_unique<DhtNode>(std::move(Dht), [this](const InfoHash& Hash, std::vector<Endpoint> Peers) {
+                      OnDhtPeers(Hash, std::move(Peers));
+                  });
             } catch (const std::exception&) {
                 // Trackers still work without it
             }
@@ -168,8 +191,12 @@ namespace Tori {
         {
             // Ask everything to stop first, so the torrents wind down in parallel rather than one after another
             std::scoped_lock Lock(_Mutex);
-            for (auto& [Id, Instance] : _Torrents) { Instance->RequestStop(); }
-            for (Retiring& Entry : _Retiring) { Entry.Instance->RequestStop(); }
+            for (auto& [Id, Instance] : _Torrents) {
+                Instance->RequestStop();
+            }
+            for (Retiring& Entry : _Retiring) {
+                Entry.Instance->RequestStop();
+            }
             Torrents = std::move(_Torrents);
             Retired  = std::move(_Retiring);
         }
@@ -186,7 +213,9 @@ namespace Tori {
         for (Retiring& Entry : Retired) {
             Entry.Instance->Join();
             const std::shared_ptr<const Metainfo> Metadata = Entry.Instance->Metadata();
-            if (Entry.DeleteFiles && Metadata) { DeleteTorrentFiles(Entry.Instance->Settings().Destination, Metadata->Files); }
+            if (Entry.DeleteFiles && Metadata) {
+                DeleteTorrentFiles(Entry.Instance->Settings().Destination, Metadata->Files);
+            }
         }
         Retired.clear();
 
@@ -234,8 +263,8 @@ namespace Tori {
                                   const bool Paused,
                                   std::vector<int> SkippedFiles) {
         Torrent::Params Params;
-        Params.Hash        = Meta.Hash;
-        Params.DisplayName = Meta.Name;
+        Params.Hash         = Meta.Hash;
+        Params.DisplayName  = Meta.Name;
         Params.Meta         = std::move(Meta);
         Params.Destination  = std::move(Destination);
         Params.StartPaused  = Paused;
@@ -252,9 +281,13 @@ namespace Tori {
         Params.StartPaused = Paused;
         Params.AddedOn     = UnixNow();
         // Magnet links don't say how trackers are grouped, so each gets its own tier and all are used
-        for (const std::string& Tracker : Magnet.Trackers) { Params.ExtraTrackers.push_back({Tracker}); }
+        for (const std::string& Tracker : Magnet.Trackers) {
+            Params.ExtraTrackers.push_back({Tracker});
+        }
         for (const std::string& Peer : Magnet.Peers) {
-            if (const std::optional<Endpoint> Address = Endpoint::Parse(Peer)) { Params.InitialPeers.push_back(*Address); }
+            if (const std::optional<Endpoint> Address = Endpoint::Parse(Peer)) {
+                Params.InitialPeers.push_back(*Address);
+            }
         }
         return Launch(std::move(Params));
     }
@@ -321,7 +354,8 @@ namespace Tori {
                 if (Entry.path() != ResumePath(Item.Resume.Hash)) { continue; }  // A stray copy
 
                 try {
-                    if (const std::optional<std::string> File = ReadWholeFile(TorrentPath(Item.Resume.Hash), kMaxTorrentFileSize)) {
+                    if (const std::optional<std::string> File =
+                          ReadWholeFile(TorrentPath(Item.Resume.Hash), kMaxTorrentFileSize)) {
                         Metainfo Meta = Metainfo::Parse(*File);
                         if (Meta.Hash == Item.Resume.Hash) { Item.Meta = std::move(Meta); }
                     }
@@ -361,7 +395,9 @@ namespace Tori {
         {
             // Holding _SaveMutex keeps RemoveTorrent from taking any of these away while they're saved
             std::scoped_lock Lock(_Mutex);
-            for (const auto& [Id, Instance] : _Torrents) { Current.emplace_back(Id, Instance.get()); }
+            for (const auto& [Id, Instance] : _Torrents) {
+                Current.emplace_back(Id, Instance.get());
+            }
         }
         SaveTorrents(Current);
     }
@@ -471,19 +507,23 @@ namespace Tori {
         std::scoped_lock Lock(_Mutex);
         std::vector<TorrentStats> Result;
         Result.reserve(_Torrents.size());
-        for (const auto& [Id, Instance] : _Torrents) { Result.push_back(Instance->Stats()); }
+        for (const auto& [Id, Instance] : _Torrents) {
+            Result.push_back(Instance->Stats());
+        }
         return Result;
     }
 
     void Session::ListenLoop(const std::stop_token& Stop) {
-        Listener& State = *_Listener;
+        Listener& State               = *_Listener;
         Clock::time_point NextSave    = Clock::now() + kSaveInterval;
         Clock::time_point NextDhtSave = Clock::now() + kDhtSaveInterval;  // Once the routing table has filled up
 
         while (!Stop.stop_requested()) {
             std::vector<WSAPOLLFD> Fds;
             Fds.push_back({State.Socket.Get(), POLLRDNORM, 0});
-            for (const Listener::PendingConnection& Entry : State.Pending) { Fds.push_back({Entry.Socket.Get(), POLLRDNORM, 0}); }
+            for (const Listener::PendingConnection& Entry : State.Pending) {
+                Fds.push_back({Entry.Socket.Get(), POLLRDNORM, 0});
+            }
             WSAPoll(Fds.data(), static_cast<ULONG>(Fds.size()), static_cast<INT>(kPollTimeout.count()));
 
             const Clock::time_point Now = Clock::now();
@@ -497,7 +537,8 @@ namespace Tori {
                     const std::optional<Endpoint> Remote = FromSockaddr(reinterpret_cast<const sockaddr*>(&From));
                     if (!Remote) { continue; }
                     SetNonBlocking(Client.Get());
-                    State.Pending.push_back({.Socket = std::move(Client), .Remote = Remote->Unmapped(), .Accepted = Now});
+                    State.Pending.push_back(
+                      {.Socket = std::move(Client), .Remote = Remote->Unmapped(), .Accepted = Now});
                 }
             }
 
@@ -505,7 +546,7 @@ namespace Tori {
             for (std::size_t I = 1; I < Fds.size(); ++I) {
                 if (!(Fds[I].revents & (POLLRDNORM | POLLHUP | POLLERR))) { continue; }
                 Listener::PendingConnection& Entry = State.Pending[I - 1];
-                const int Received       = recv(Entry.Socket.Get(),
+                const int Received                 = recv(Entry.Socket.Get(),
                                           reinterpret_cast<char*>(Entry.Buffer.data() + Entry.Received),
                                           static_cast<int>(kHandshakeSize - Entry.Received),
                                           0);
@@ -559,8 +600,8 @@ namespace Tori {
         }
         // Destroying a stopped torrent just joins its finished thread; delete files only after that
         for (Retiring& Entry : Finished) {
-            const std::filesystem::path Destination           = Entry.Instance->Settings().Destination;
-            const std::shared_ptr<const Metainfo> Metadata    = Entry.Instance->Metadata();
+            const std::filesystem::path Destination        = Entry.Instance->Settings().Destination;
+            const std::shared_ptr<const Metainfo> Metadata = Entry.Instance->Metadata();
             Entry.Instance.reset();
             // A magnet removed before its metadata arrived has no files to delete
             if (Entry.DeleteFiles && Metadata) { DeleteTorrentFiles(Destination, Metadata->Files); }
@@ -571,8 +612,11 @@ namespace Tori {
         std::set<std::filesystem::path> Folders;
         for (const TorrentFile& File : Files) {
             std::error_code Ec;
-            if (!File.IsPadding) { std::filesystem::remove(std::filesystem::path(LongPath(Destination / File.Path)), Ec); }
-            for (std::filesystem::path Folder = File.Path.parent_path(); !Folder.empty(); Folder = Folder.parent_path()) {
+            if (!File.IsPadding) {
+                std::filesystem::remove(std::filesystem::path(LongPath(Destination / File.Path)), Ec);
+            }
+            for (std::filesystem::path Folder = File.Path.parent_path(); !Folder.empty();
+                 Folder                       = Folder.parent_path()) {
                 Folders.insert(Folder);
             }
         }

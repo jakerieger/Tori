@@ -1,12 +1,25 @@
-#include "Core/Utf8.hpp"
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "UI/Updates.hpp"
+#include "Core/Utf8.hpp"
+#include "Net/Http.hpp"
 
-#include <format>
-#include <stdexcept>
-#include <variant>
+#include <array>
+#include <charconv>
+#include <memory>
 
-#include <windows.h>
-#include <winhttp.h>
 #include <shellapi.h>
 
 namespace Tori::UI {
@@ -16,12 +29,6 @@ namespace Tori::UI {
         constexpr std::string_view kRepoOwner = "jakerieger";
         constexpr std::string_view kRepoName  = "Tori";
 
-        struct HandleCloser {
-            void operator()(void* H) const noexcept {
-                if (H) WinHttpCloseHandle(H);
-            }
-        };
-        using Handle = std::unique_ptr<void, HandleCloser>;
         // Accepts "1.2.3", "v1.2.3", "1.2", "1.2.3.4", "1.2.3-beta" (suffix ignored).
         using Version = std::array<uint32_t, 4>;  // std::array has a defaulted <=>
 
@@ -44,70 +51,7 @@ namespace Tori::UI {
             return Idx == 0 ? std::nullopt : std::optional {V};
         }
 
-        struct HttpResponse {
-            DWORD Status {0};
-            std::string Body;
-        };
-
-        std::optional<HttpResponse> HttpsGet(const std::stop_token Stop,
-                                             std::wstring_view Host,
-                                             const std::wstring& Path,
-                                             const wchar_t* UserAgent) {
-            Handle Session {WinHttpOpen(UserAgent, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, nullptr, nullptr, 0)};
-            if (!Session) return std::nullopt;
-
-            WinHttpSetTimeouts(Session.get(), 5000, 5000, 10000, 10000);
-
-            Handle Connection {
-              WinHttpConnect(Session.get(), std::wstring {Host}.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0)};
-            if (!Connection) return std::nullopt;
-
-            if (Stop.stop_requested()) { return std::nullopt; }
-            Handle Request {WinHttpOpenRequest(Connection.get(),
-                                               L"GET",
-                                               Path.c_str(),
-                                               nullptr,
-                                               nullptr,
-                                               nullptr,
-                                               WINHTTP_FLAG_SECURE)};
-            if (!Request) return std::nullopt;
-
-            auto Headers = L"Accept: application/vnd.github+json\r\n"
-                           L"X-GitHub-Api-Version: 2022-11-28\r\n";
-            if (Stop.stop_requested()) { return std::nullopt; }
-            if (!WinHttpSendRequest(Request.get(), Headers, static_cast<DWORD>(-1L), nullptr, 0, 0, 0)) {
-                return std::nullopt;
-            }
-            if (Stop.stop_requested()) { return std::nullopt; }
-            if (!WinHttpReceiveResponse(Request.get(), nullptr)) return std::nullopt;
-
-            HttpResponse Response;
-            DWORD Size = sizeof(Response.Status);
-            if (Stop.stop_requested()) { return std::nullopt; }
-            if (!WinHttpQueryHeaders(Request.get(),
-                                     WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
-                                     nullptr,
-                                     &Response.Status,
-                                     &Size,
-                                     nullptr)) {
-                return std::nullopt;
-            }
-
-            for (;;) {
-                if (Stop.stop_requested()) { return std::nullopt; }
-
-                DWORD Avail = 0;
-                if (!WinHttpQueryDataAvailable(Request.get(), &Avail)) return std::nullopt;
-                if (Avail == 0) break;
-
-                std::string Chunk(Avail, '\0');
-                DWORD Read = 0;
-                if (!WinHttpReadData(Request.get(), Chunk.data(), Avail, &Read)) return std::nullopt;
-                Response.Body.append(Chunk, 0, Read);
-            }
-
-            return Response;
-        }
+        constexpr std::size_t kMaxResponseSize = 1024 * 1024;  // A release's JSON is a few KiB
 
         std::optional<std::string> JsonStringField(std::string_view Json, const std::string_view Key) {
             const std::string Needle = "\"" + std::string {Key} + "\"";
@@ -127,7 +71,8 @@ namespace Tori::UI {
         }
 
         bool OpenUrl(const std::string& Url) {
-            HINSTANCE Result = ShellExecuteA(nullptr, "open", Url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+            HINSTANCE Result =
+              ShellExecuteW(nullptr, L"open", Utf8ToWide(Url).c_str(), nullptr, nullptr, SW_SHOWNORMAL);
             return reinterpret_cast<INT_PTR>(Result) > 32;
         }
 
@@ -198,10 +143,11 @@ namespace Tori::UI {
 
         const std::wstring Path =
           L"/repos/" + Utf8ToWide(kRepoOwner) + L"/" + Utf8ToWide(kRepoName) + L"/releases/latest";
-        const auto Response = HttpsGet(Stop, L"api.github.com", Path, L"ToriUpdateChecker/1.0");
+        DWORD Error = 0;
+        const auto Response =
+          Http::HttpsGet(Stop, L"api.github.com", Path, L"ToriUpdateChecker/1.0", kMaxResponseSize, Error);
         if (!Response) {
-            Result.Notes =
-              "Network error while contacting GitHub (WinHTTP error " + std::to_string(GetLastError()) + ").";
+            Result.Notes = "Network error while contacting GitHub (WinHTTP error " + std::to_string(Error) + ").";
             return Result;
         }
 
@@ -230,13 +176,14 @@ namespace Tori::UI {
             return Result;
         }
 
-        const auto Cmp = Current <=> *Latest;
+        const auto Cmp = *Current <=> *Latest;
         if (Cmp < 0) {
             Result.Status = UpdateStatus::UpdateAvailable;
             Result.Notes  = "A newer version of Tori is available: " + *Tag + " (you are running " +
                            std::string {kToriVersion} + ").";
-            Result.DownloadUrl =
-              "https://github.com/" + std::string {kRepoOwner} + "/" + std::string {kRepoName} + "/release/latest";
+            // The page for exactly the release that was found, rather than whatever is latest by the time it's opened
+            Result.DownloadUrl = "https://github.com/" + std::string {kRepoOwner} + "/" + std::string {kRepoName} +
+                                 "/releases/tag/" + *Tag;
         } else if (Cmp == 0) {
             Result.Status = UpdateStatus::UpToDate;
             Result.Notes =

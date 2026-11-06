@@ -6,3 +6,5 @@ build*
 Docs/html
 Docs/*.html
 Docs/images
+Release*
+MakeRelease.ps1

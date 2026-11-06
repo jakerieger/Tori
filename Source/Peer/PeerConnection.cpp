@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Peer/PeerConnection.hpp"
 
 #include "Core/Win32.hpp"
@@ -7,8 +21,8 @@
 
 namespace Tori {
     namespace {
-        constexpr std::size_t kReadChunk     = 64 * 1024;
-        constexpr int kMaxReadsPerPoll       = 8;  // So one fast peer can't starve the others in a loop pass
+        constexpr std::size_t kReadChunk = 64 * 1024;
+        constexpr int kMaxReadsPerPoll   = 8;  // So one fast peer can't starve the others in a loop pass
 
         void Configure(const SOCKET Socket) {
             u_long NonBlocking = 1;
@@ -33,9 +47,8 @@ namespace Tori {
         return std::unique_ptr<PeerConnection>(new PeerConnection(std::move(Socket), Remote, false));
     }
 
-    std::unique_ptr<PeerConnection> PeerConnection::Accept(UniqueSocket Socket,
-                                                           const Endpoint& Remote,
-                                                           const Handshake& Received) {
+    std::unique_ptr<PeerConnection>
+    PeerConnection::Accept(UniqueSocket Socket, const Endpoint& Remote, const Handshake& Received) {
         Configure(Socket.Get());
         auto Connection = std::unique_ptr<PeerConnection>(new PeerConnection(std::move(Socket), Remote, true));
         Connection->_RemoteHandshake = Received;
@@ -79,7 +92,8 @@ namespace Tori {
 
     bool PeerConnection::Read() {
         for (int Attempt = 0; Attempt < kMaxReadsPerPoll; ++Attempt) {
-            const int Received = recv(_Socket.Get(), reinterpret_cast<char*>(_ReadBuffer.data()), static_cast<int>(_ReadBuffer.size()), 0);
+            const int Received =
+              recv(_Socket.Get(), reinterpret_cast<char*>(_ReadBuffer.data()), static_cast<int>(_ReadBuffer.size()), 0);
             if (Received == 0) { return Fail("closed by peer"); }
             if (Received == SOCKET_ERROR) {
                 if (WSAGetLastError() == WSAEWOULDBLOCK) { return true; }
@@ -89,7 +103,9 @@ namespace Tori {
             std::span<const std::uint8_t> Data(_ReadBuffer.data(), static_cast<std::size_t>(Received));
             if (!_RemoteHandshake) {
                 const std::size_t Take = std::min(kHandshakeSize - _HandshakeBuffer.size(), Data.size());
-                _HandshakeBuffer.insert(_HandshakeBuffer.end(), Data.begin(), Data.begin() + static_cast<std::ptrdiff_t>(Take));
+                _HandshakeBuffer.insert(_HandshakeBuffer.end(),
+                                        Data.begin(),
+                                        Data.begin() + static_cast<std::ptrdiff_t>(Take));
                 Data = Data.subspan(Take);
                 if (_HandshakeBuffer.size() == kHandshakeSize) {
                     _RemoteHandshake = DecodeHandshake(_HandshakeBuffer);

@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Meta/TorrentCreator.hpp"
 
 #include "Core/Bencode.hpp"
@@ -58,7 +72,9 @@ namespace Tori {
             for (const fs::path& Path : Relative) {
                 const auto Length = static_cast<std::int64_t>(fs::file_size(Source / Path));
                 Bencode::List Components;
-                for (const fs::path& Component : Path) { Components.emplace_back(PathToUtf8(Component)); }
+                for (const fs::path& Component : Path) {
+                    Components.emplace_back(PathToUtf8(Component));
+                }
 
                 Layout.Files.push_back({.Path = Name / Path, .Length = Length, .Offset = Layout.TotalSize});
                 Layout.PathComponents.push_back(std::move(Components));
@@ -99,13 +115,14 @@ namespace Tori {
 
     std::int64_t AutoPieceLength(const std::int64_t TotalSize) {
         std::int64_t Length = kMinAutoPieceLength;
-        while (Length < kMaxAutoPieceLength && TotalSize / Length > kTargetPieceCount) { Length *= 2; }
+        while (Length < kMaxAutoPieceLength && TotalSize / Length > kTargetPieceCount) {
+            Length *= 2;
+        }
         return Length;
     }
 
-    std::optional<std::string> CreateTorrent(const TorrentCreatorOptions& Options,
-                                             const std::stop_token Stop,
-                                             const CreateProgress& Progress) {
+    std::optional<std::string>
+    CreateTorrent(const TorrentCreatorOptions& Options, const std::stop_token Stop, const CreateProgress& Progress) {
         fs::path Source = fs::absolute(Options.Source).lexically_normal();
         if (!Source.has_filename()) { Source = Source.parent_path(); }  // "C:/folder/" normalizes with a trailing slash
         if (Source.filename().empty() || Source == Source.root_path()) { Fail("cannot share a whole drive"); }

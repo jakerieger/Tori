@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Dht/DhtNode.hpp"
 
 #include "Core/Random.hpp"
@@ -19,8 +33,8 @@ namespace Tori {
         using Clock = std::chrono::steady_clock;
         using namespace std::chrono_literals;
 
-        constexpr int kAlpha                       = 4;   // Queries in flight per lookup
-        constexpr std::size_t kK                   = 8;   // Closest nodes a lookup must hear from
+        constexpr int kAlpha                       = 4;  // Queries in flight per lookup
+        constexpr std::size_t kK                   = 8;  // Closest nodes a lookup must hear from
         constexpr std::size_t kMaxLookupCandidates = 128;
         constexpr auto kQueryTimeout               = 5s;
         constexpr auto kLookupTimeout              = 60s;
@@ -29,7 +43,7 @@ namespace Tori {
         constexpr auto kBootstrapRetry             = 30s;
         constexpr auto kSnapshotInterval           = 2s;
         constexpr auto kStoredPeerLifetime         = 30min;
-        constexpr std::size_t kMaxStoredPeers      = 100;   // Per info hash
+        constexpr std::size_t kMaxStoredPeers      = 100;  // Per info hash
         constexpr std::size_t kMaxStoredHashes     = 1000;
         constexpr std::size_t kMinHealthyNodes     = 8;
 
@@ -127,7 +141,9 @@ namespace Tori {
                         break;
                     }
                     if (const auto Sender = FromSockaddr(reinterpret_cast<const sockaddr*>(&From))) {
-                        HandlePacket(std::span(Buffer.data(), static_cast<std::size_t>(Received)), Sender->Unmapped(), Now);
+                        HandlePacket(std::span(Buffer.data(), static_cast<std::size_t>(Received)),
+                                     Sender->Unmapped(),
+                                     Now);
                     }
                 }
 
@@ -175,8 +191,8 @@ namespace Tori {
         };
 
         struct Lookup {
-            std::uint64_t Id     = 0;
-            bool ForPeers        = false;
+            std::uint64_t Id = 0;
+            bool ForPeers    = false;
             NodeId Target {};
             std::uint16_t AnnouncePort = 0;
             std::vector<Candidate> Candidates;  // Closest first
@@ -212,12 +228,18 @@ namespace Tori {
             Created.Target       = Target;
             Created.AnnouncePort = AnnouncePort;
             Created.Started      = Now;
-            for (const NodeContact& Node : _Table.Closest(Target, kK * 2)) { AddCandidate(Created, Node); }
+            for (const NodeContact& Node : _Table.Closest(Target, kK * 2)) {
+                AddCandidate(Created, Node);
+            }
 
             // Seeds have unknown IDs; treat them as maximally far so known nodes are tried first
             NodeId Far = Target;
-            for (std::uint8_t& Byte : Far) { Byte = static_cast<std::uint8_t>(~Byte); }
-            for (const Endpoint& Seed : Seeds) { AddCandidate(Created, {Far, Seed}); }
+            for (std::uint8_t& Byte : Far) {
+                Byte = static_cast<std::uint8_t>(~Byte);
+            }
+            for (const Endpoint& Seed : Seeds) {
+                AddCandidate(Created, {Far, Seed});
+            }
 
             _Lookups.push_back(std::move(Created));
         }
@@ -225,7 +247,8 @@ namespace Tori {
         void AddCandidate(Lookup& Target, const NodeContact& Node) {
             if (Node.Id == _State.Self || Node.Address.Port == 0 || Node.Address.IsV6) { return; }
             const bool Known = std::ranges::any_of(Target.Candidates, [&](const Candidate& Existing) {
-                return Existing.Contact.Address == Node.Address || (Existing.Contact.Id == Node.Id && Existing.State != Candidate::Status::Fresh);
+                return Existing.Contact.Address == Node.Address ||
+                       (Existing.Contact.Id == Node.Id && Existing.State != Candidate::Status::Fresh);
             });
             if (Known) { return; }
 
@@ -264,7 +287,9 @@ namespace Tori {
                 }
                 // An empty lookup waits (until its timeout) for bootstrapping to fill the routing table
                 if (Considered == 0 && Target.Candidates.empty()) {
-                    for (const NodeContact& Node : _Table.Closest(Target.Target, kK * 2)) { AddCandidate(Target, Node); }
+                    for (const NodeContact& Node : _Table.Closest(Target.Target, kK * 2)) {
+                        AddCandidate(Target, Node);
+                    }
                     return false;
                 }
                 Finished = (ClosestAnswered || Considered == 0) && InFlight == 0;
@@ -305,7 +330,8 @@ namespace Tori {
         }
 
         static Candidate* FindCandidate(Lookup& Target, const Endpoint& Address) {
-            const auto It = std::ranges::find_if(Target.Candidates, [&](const Candidate& C) { return C.Contact.Address == Address; });
+            const auto It =
+              std::ranges::find_if(Target.Candidates, [&](const Candidate& C) { return C.Contact.Address == Address; });
             return It == Target.Candidates.end() ? nullptr : &*It;
         }
 
@@ -327,12 +353,18 @@ namespace Tori {
             if (To.IsV6) { return; }
             sockaddr_storage Address {};
             const int Length = ToSockaddr(To, Address);
-            sendto(_State.Socket.Get(), Packet.data(), static_cast<int>(Packet.size()), 0, reinterpret_cast<const sockaddr*>(&Address), Length);
+            sendto(_State.Socket.Get(),
+                   Packet.data(),
+                   static_cast<int>(Packet.size()),
+                   0,
+                   reinterpret_cast<const sockaddr*>(&Address),
+                   Length);
         }
 
         // ---- Receiving -----------------------------------------------------------------------------------------
 
-        void HandlePacket(const std::span<const std::uint8_t> Packet, const Endpoint& From, const Clock::time_point Now) {
+        void
+        HandlePacket(const std::span<const std::uint8_t> Packet, const Endpoint& From, const Clock::time_point Now) {
             const std::optional<KrpcMessage> Message = DecodeKrpc(Packet);
             if (!Message) { return; }
 
@@ -354,7 +386,10 @@ namespace Tori {
             }
         }
 
-        void OnResponse(const Pending& Request, const KrpcMessage& Message, const Endpoint& From, const Clock::time_point Now) {
+        void OnResponse(const Pending& Request,
+                        const KrpcMessage& Message,
+                        const Endpoint& From,
+                        const Clock::time_point Now) {
             _Table.Seen({*Message.SenderId, From}, Now);
 
             Lookup* Target = Request.LookupId ? FindLookup(Request.LookupId) : nullptr;
@@ -368,7 +403,9 @@ namespace Tori {
             }
 
             if (const std::string* Nodes = Message.Body.FindString("nodes")) {
-                for (const NodeContact& Node : DecodeCompactNodes(*Nodes)) { AddCandidate(*Target, Node); }
+                for (const NodeContact& Node : DecodeCompactNodes(*Nodes)) {
+                    AddCandidate(*Target, Node);
+                }
             }
 
             if (const Bencode::List* Values = Message.Body.FindList("values"); Values && Target->ForPeers) {
@@ -442,7 +479,9 @@ namespace Tori {
                 if (const auto Stored = _Store.find(Key); Stored != _Store.end()) {
                     std::erase_if(Stored->second, [&](const StoredPeer& Peer) { return Now >= Peer.Expires; });
                     Bencode::List Values;
-                    for (const StoredPeer& Peer : Stored->second) { Values.emplace_back(CompactPeer(Peer.Address)); }
+                    for (const StoredPeer& Peer : Stored->second) {
+                        Values.emplace_back(CompactPeer(Peer.Address));
+                    }
                     if (!Values.empty()) { Reply.emplace_back("values", std::move(Values)); }
                 }
             } else if (Query.Method == "announce_peer") {
@@ -450,12 +489,15 @@ namespace Tori {
                 const std::string* Token         = Query.Body.FindString("token");
                 const Bencode::Integer* Port     = Query.Body.FindInteger("port");
                 const Bencode::Integer* Implied  = Query.Body.FindInteger("implied_port");
-                if (!Hash || !Token || (*Token != MakeToken(From, _Secret) && *Token != MakeToken(From, _PreviousSecret))) {
+                if (!Hash || !Token ||
+                    (*Token != MakeToken(From, _Secret) && *Token != MakeToken(From, _PreviousSecret))) {
                     return SendTo(From, EncodeKrpcError(Query.Transaction, 203, "bad token"));
                 }
                 Endpoint Peer = From;
                 if (!(Implied && *Implied == 1)) {
-                    if (!Port || *Port <= 0 || *Port > 65535) { return SendTo(From, EncodeKrpcError(Query.Transaction, 203, "bad port")); }
+                    if (!Port || *Port <= 0 || *Port > 65535) {
+                        return SendTo(From, EncodeKrpcError(Query.Transaction, 203, "bad port"));
+                    }
                     Peer.Port = static_cast<std::uint16_t>(*Port);
                 }
                 StorePeer(*Hash, Peer, Now);
@@ -473,7 +515,9 @@ namespace Tori {
             if (!_Store.contains(Key) && _Store.size() >= kMaxStoredHashes) { return; }
 
             std::vector<StoredPeer>& Peers = _Store[Key];
-            std::erase_if(Peers, [&](const StoredPeer& Existing) { return Existing.Address == Peer || Now >= Existing.Expires; });
+            std::erase_if(Peers, [&](const StoredPeer& Existing) {
+                return Existing.Address == Peer || Now >= Existing.Expires;
+            });
             if (Peers.size() >= kMaxStoredPeers) { Peers.erase(Peers.begin()); }
             Peers.push_back({Peer, Now + kStoredPeerLifetime});
         }
@@ -497,7 +541,9 @@ namespace Tori {
 
         void PublishSnapshot() {
             std::vector<Endpoint> Nodes;
-            for (const NodeContact& Node : _Table.All()) { Nodes.push_back(Node.Address); }
+            for (const NodeContact& Node : _Table.All()) {
+                Nodes.push_back(Node.Address);
+            }
             std::scoped_lock Lock(_State.Mutex);
             _State.Nodes = std::move(Nodes);
         }
@@ -513,9 +559,9 @@ namespace Tori {
         std::array<std::uint8_t, 8> _Secret {};
         std::array<std::uint8_t, 8> _PreviousSecret {};
 
-        Clock::time_point _NextRotation  = Clock::now() + kTokenRotation;
+        Clock::time_point _NextRotation = Clock::now() + kTokenRotation;
         Clock::time_point _NextBootstrap {};
-        Clock::time_point _NextRefresh   = Clock::now() + kRefreshInterval;
+        Clock::time_point _NextRefresh = Clock::now() + kRefreshInterval;
         Clock::time_point _NextSnapshot {};
     };
 

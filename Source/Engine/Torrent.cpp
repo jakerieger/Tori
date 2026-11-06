@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Engine/Torrent.hpp"
 
 #include "Core/RateMeter.hpp"
@@ -39,17 +53,17 @@ namespace Tori {
         constexpr auto kMetadataTimeout    = 10s;   // Unanswered ut_metadata requests are forgotten after this
         constexpr auto kDhtLookupHungry    = 2min;  // While fetching metadata or short of peers
         constexpr auto kDhtLookupSatisfied = 15min;
-        constexpr auto kResumeInterval     = 60s;   // Routine changes (transfer totals) are saved this often
+        constexpr auto kResumeInterval     = 60s;  // Routine changes (transfer totals) are saved this often
         constexpr auto kDetailsInterval    = 1s;
 
-        constexpr int kIncomingSlack                = 5;  // Incoming peers accepted beyond MaxPeers
-        constexpr int kHungryPeerCount              = 10;
-        constexpr int kMetadataRequestsPerPeer      = 2;
-        constexpr int kMaxMetadataRejects           = 3;
-        constexpr std::size_t kMaxCandidates        = 2000;
-        constexpr std::size_t kMaxQueuedRequests    = 256;
-        constexpr std::size_t kMaxPendingHaves      = 100000;
-        constexpr std::size_t kServeBufferLimit     = 512 * 1024;
+        constexpr int kIncomingSlack             = 5;  // Incoming peers accepted beyond MaxPeers
+        constexpr int kHungryPeerCount           = 10;
+        constexpr int kMetadataRequestsPerPeer   = 2;
+        constexpr int kMaxMetadataRejects        = 3;
+        constexpr std::size_t kMaxCandidates     = 2000;
+        constexpr std::size_t kMaxQueuedRequests = 256;
+        constexpr std::size_t kMaxPendingHaves   = 100000;
+        constexpr std::size_t kServeBufferLimit  = 512 * 1024;
 
         // What we report as "left" to trackers before the size is known; 0 would make us look like a seed
         constexpr std::int64_t kUnknownLeft = 16 * 1024;
@@ -58,12 +72,8 @@ namespace Tori {
     class TorrentWorker {
     public:
         TorrentWorker(Torrent& Owner, const std::stop_token Stop)
-            : _Owner(Owner),
-              _Params(Owner._Params),
-              _Stop(Stop),
-              _Assembler(Owner._Params.Hash),
-              _Choker({.Slots = Owner._Params.Limits.UploadSlots}),
-              _Key(RandomU32()) {
+            : _Owner(Owner), _Params(Owner._Params), _Stop(Stop), _Assembler(Owner._Params.Hash),
+              _Choker({.Slots = Owner._Params.Limits.UploadSlots}), _Key(RandomU32()) {
             if (_Params.Meta) { _Meta = std::make_shared<const Metainfo>(*_Params.Meta); }
             if (_Params.Resume) {
                 _PriorUploaded   = _Params.Resume->Uploaded;
@@ -98,7 +108,9 @@ namespace Tori {
                     if (IsRunning()) {
                         if (_Announcer) {
                             _Announcer->Tick(Now, Totals());
-                            for (const Endpoint& Peer : _Announcer->TakePeers()) { AddCandidate(Peer); }
+                            for (const Endpoint& Peer : _Announcer->TakePeers()) {
+                                AddCandidate(Peer);
+                            }
                         }
                         if (Now >= _NextHousekeeping) {
                             Housekeeping(Now);
@@ -192,7 +204,9 @@ namespace Tori {
         void ApplyWanted() {
             std::vector<bool> Skipped(_Meta->Files.size(), false);
             for (const int Index : _SkippedFiles) {
-                if (Index >= 0 && static_cast<std::size_t>(Index) < Skipped.size()) { Skipped[static_cast<std::size_t>(Index)] = true; }
+                if (Index >= 0 && static_cast<std::size_t>(Index) < Skipped.size()) {
+                    Skipped[static_cast<std::size_t>(Index)] = true;
+                }
             }
 
             Bitfield Wanted(PieceCount());
@@ -201,7 +215,9 @@ namespace Tori {
                 if (Skipped[I] || File.IsPadding || File.Length == 0) { continue; }
                 const auto First = static_cast<int>(File.Offset / _Meta->PieceLength);
                 const auto Last  = static_cast<int>((File.Offset + File.Length - 1) / _Meta->PieceLength);
-                for (int Piece = First; Piece <= Last; ++Piece) { Wanted.Set(Piece); }
+                for (int Piece = First; Piece <= Last; ++Piece) {
+                    Wanted.Set(Piece);
+                }
             }
             _Picker->SetWanted(Wanted);
             RecountProgress();
@@ -228,7 +244,7 @@ namespace Tori {
             _PiecesKnown  = false;
             Publish(Clock::now());
 
-            Clock::time_point LastPublish = Clock::now();
+            Clock::time_point LastPublish      = Clock::now();
             const std::optional<Bitfield> Have = VerifyPieces(*_Storage, *_Meta, _Stop, [&](const int Checked, int) {
                 _CheckedBytes = std::min(_Meta->TotalSize, static_cast<std::int64_t>(Checked) * _Meta->PieceLength);
                 if (Clock::now() - LastPublish >= kStatsInterval) {
@@ -277,7 +293,9 @@ namespace Tori {
             _ResumeUrgent  = true;
             _NextChoke     = Now;
             _NextDhtLookup = Now;
-            for (const Endpoint& Address : _Params.InitialPeers) { AddCandidate(Address); }
+            for (const Endpoint& Address : _Params.InitialPeers) {
+                AddCandidate(Address);
+            }
 
             if (!_Announcer) {
                 Announcer::Config Config;
@@ -285,14 +303,18 @@ namespace Tori {
                 Config.Id   = _Params.LocalId;
                 Config.Port = _Params.ListenPort;
                 Config.Key  = _Key;
-                _Announcer  = std::make_unique<Announcer>(
-                  Config, _Meta ? _Meta->TrackerTiers : std::vector<std::vector<std::string>> {}, _Params.Announce);
+                _Announcer =
+                  std::make_unique<Announcer>(Config,
+                                              _Meta ? _Meta->TrackerTiers : std::vector<std::vector<std::string>> {},
+                                              _Params.Announce);
                 _Announcer->AddTrackers(_Params.ExtraTrackers);
             }
         }
 
         void StopRunning(const Clock::time_point Now, const TorrentState NewState) {
-            for (const auto& Peer : _Peers) { Drop(*Peer); }
+            for (const auto& Peer : _Peers) {
+                Drop(*Peer);
+            }
             RemoveDropped(Now);
             RetireAnnouncer(Now);
             _Candidates.clear();
@@ -343,8 +365,9 @@ namespace Tori {
         /// Publishes what to save if anything changed. Routine changes wait for kResumeInterval; setting
         /// _ResumeUrgent saves on the next loop pass.
         void SaveResume(const Clock::time_point Now) {
-            const auto Key = std::tuple(_Picker ? _Picker->Have().Count() : -1, _Up.Total(), _Down.Total(), _Paused, _Meta != nullptr);
-            _NextResume    = Now + kResumeInterval;
+            const auto Key =
+              std::tuple(_Picker ? _Picker->Have().Count() : -1, _Up.Total(), _Down.Total(), _Paused, _Meta != nullptr);
+            _NextResume = Now + kResumeInterval;
             if (!_ResumeUrgent && Key == _LastResumeKey) { return; }
             _ResumeUrgent  = false;
             _LastResumeKey = Key;
@@ -380,10 +403,10 @@ namespace Tori {
 
         void Publish(const Clock::time_point Now) {
             TorrentStats Stats;
-            Stats.Id              = _Params.Id;
-            Stats.Hash            = _Params.Hash;
-            Stats.Name            = _Meta ? _Meta->Name : _Params.DisplayName;
-            Stats.Destination     = _Params.Destination;
+            Stats.Id          = _Params.Id;
+            Stats.Hash        = _Params.Hash;
+            Stats.Name        = _Meta ? _Meta->Name : _Params.DisplayName;
+            Stats.Destination = _Params.Destination;
             if (_State == TorrentState::Checking) {
                 Stats.TotalSize      = static_cast<double>(_Meta->TotalSize);
                 Stats.DownloadedSize = static_cast<double>(_CheckedBytes);
@@ -420,7 +443,8 @@ namespace Tori {
                              ++Piece) {
                             if (!Have.Get(Piece)) { continue; }
                             const std::int64_t Start = static_cast<std::int64_t>(Piece) * _Meta->PieceLength;
-                            Entry.Done += std::min(End, Start + _Picker->PieceSize(Piece)) - std::max(File.Offset, Start);
+                            Entry.Done +=
+                              std::min(End, Start + _Picker->PieceSize(Piece)) - std::max(File.Offset, Start);
                         }
                     }
                     Data->Files.push_back(std::move(Entry));
@@ -433,7 +457,9 @@ namespace Tori {
                 PeerDetails Entry;
                 Entry.Address       = Target.Address.ToString();
                 Entry.Client        = Target.Client.empty() ? DescribePeerId(Target.Id) : Target.Client;
-                Entry.Progress      = Target.Has.Size() > 0 ? static_cast<float>(Target.Has.Count()) / static_cast<float>(Target.Has.Size()) : 0.0f;
+                Entry.Progress      = Target.Has.Size() > 0
+                                        ? static_cast<float>(Target.Has.Count()) / static_cast<float>(Target.Has.Size())
+                                        : 0.0f;
                 Entry.DownloadSpeed = Target.Down.Rate(Now);
                 Entry.UploadSpeed   = Target.Up.Rate(Now);
                 if (Target.AmInterested) { Entry.Flags += Target.PeerChoking ? 'd' : 'D'; }
@@ -441,17 +467,23 @@ namespace Tori {
                 if (Target.Incoming) { Entry.Flags += 'I'; }
                 Data->Peers.push_back(std::move(Entry));
             }
-            std::ranges::sort(Data->Peers, std::greater {}, [](const PeerDetails& Entry) { return Entry.DownloadSpeed + Entry.UploadSpeed; });
+            std::ranges::sort(Data->Peers, std::greater {}, [](const PeerDetails& Entry) {
+                return Entry.DownloadSpeed + Entry.UploadSpeed;
+            });
 
             if (_Announcer) {
                 Data->Trackers = _Announcer->Status();
             } else {
                 // Paused or stopped: list the trackers without any status
-                std::vector<std::vector<std::string>> Tiers = _Meta ? _Meta->TrackerTiers : std::vector<std::vector<std::string>> {};
+                std::vector<std::vector<std::string>> Tiers =
+                  _Meta ? _Meta->TrackerTiers : std::vector<std::vector<std::string>> {};
                 Tiers.insert(Tiers.end(), _Params.ExtraTrackers.begin(), _Params.ExtraTrackers.end());
                 for (std::size_t Tier = 0; Tier < Tiers.size(); ++Tier) {
                     for (const std::string& Url : Tiers[Tier]) {
-                        if (std::ranges::any_of(Data->Trackers, [&](const TrackerStatus& Known) { return Known.Url == Url; })) { continue; }
+                        if (std::ranges::any_of(Data->Trackers,
+                                                [&](const TrackerStatus& Known) { return Known.Url == Url; })) {
+                            continue;
+                        }
                         Data->Trackers.push_back({.Url = Url, .Tier = static_cast<int>(Tier)});
                     }
                 }
@@ -460,7 +492,8 @@ namespace Tori {
         }
 
         [[nodiscard]] int ActivePeerCount() const {
-            return static_cast<int>(std::ranges::count_if(_Peers, [](const auto& Peer) { return Peer->Active && !Peer->Dropped; }));
+            return static_cast<int>(
+              std::ranges::count_if(_Peers, [](const auto& Peer) { return Peer->Active && !Peer->Dropped; }));
         }
 
         // ---- Commands ------------------------------------------------------------------------------------------
@@ -601,7 +634,8 @@ namespace Tori {
             const Endpoint Remote = Incoming.Remote.Unmapped();
             if (ConnectedTo(Remote)) { return; }
 
-            _Peers.push_back(NewPeer(PeerConnection::Accept(std::move(Incoming.Socket), Remote, Incoming.Received), Now));
+            _Peers.push_back(
+              NewPeer(PeerConnection::Accept(std::move(Incoming.Socket), Remote, Incoming.Received), Now));
             _Peers.back()->Incoming = true;
             OnHandshake(*_Peers.back(), Now);
         }
@@ -653,7 +687,9 @@ namespace Tori {
                     continue;
                 }
                 AbortRequests(Target);
-                if (Target.Active && _Picker && Target.Has.Size() == _Picker->PieceCount()) { _Picker->RemovePeer(Target.Has); }
+                if (Target.Active && _Picker && Target.Has.Size() == _Picker->PieceCount()) {
+                    _Picker->RemovePeer(Target.Has);
+                }
 
                 Clock::time_point& Retry = _RetryAfter[Target.Address];
                 Retry = std::max(Retry, Now + (Target.Active ? kRetryAfterDrop : kRetryAfterFailure));
@@ -740,7 +776,9 @@ namespace Tori {
                     OnHave(Target, Message.Index, Now);
                     break;
                 case MessageId::Bitfield:
-                    if (Target.ReceivedBitfield || Target.Has.Count() > 0) { return Drop(Target); }  // Must come first, once
+                    if (Target.ReceivedBitfield || Target.Has.Count() > 0) {
+                        return Drop(Target);
+                    }  // Must come first, once
                     Target.ReceivedBitfield = true;
                     if (!_Picker) {
                         Target.PendingBitfield = Message.Payload;
@@ -822,7 +860,9 @@ namespace Tori {
         void ApplyPendingAvailability(Peer& Target, const Clock::time_point Now) {
             Target.Has         = Bitfield(PieceCount());
             Target.Interesting = 0;
-            if (!Target.PendingBitfield.empty() && !ApplyBitfield(Target, Target.PendingBitfield)) { return Drop(Target); }
+            if (!Target.PendingBitfield.empty() && !ApplyBitfield(Target, Target.PendingBitfield)) {
+                return Drop(Target);
+            }
             for (const std::uint32_t Index : Target.PendingHaves) {
                 if (Index >= static_cast<std::uint32_t>(PieceCount())) { return Drop(Target); }
                 const int Piece = static_cast<int>(Index);
@@ -904,8 +944,8 @@ namespace Tori {
                 EncodeExtended(Out, Target.UtMetadataId, EncodeMetadataReject(Piece));
             } else {
                 const std::int64_t Offset = static_cast<std::int64_t>(Piece) * kMetadataPieceSize;
-                const auto Length         = static_cast<std::size_t>(std::min<std::int64_t>(kMetadataPieceSize, Size - Offset));
-                const auto* Data          = reinterpret_cast<const std::uint8_t*>(_Meta->InfoBytes.data()) + Offset;
+                const auto Length = static_cast<std::size_t>(std::min<std::int64_t>(kMetadataPieceSize, Size - Offset));
+                const auto* Data  = reinterpret_cast<const std::uint8_t*>(_Meta->InfoBytes.data()) + Offset;
                 EncodeExtended(Out, Target.UtMetadataId, EncodeMetadataData(Piece, Size, std::span(Data, Length)));
             }
             SendTo(Target, Out, Now);
@@ -979,7 +1019,9 @@ namespace Tori {
 
         void AbortRequests(Peer& Target) {
             if (_Picker) {
-                for (const BlockRequest& Block : Target.Outstanding) { _Picker->Abort(Block); }
+                for (const BlockRequest& Block : Target.Outstanding) {
+                    _Picker->Abort(Block);
+                }
             }
             Target.Outstanding.clear();
         }
@@ -1000,7 +1042,8 @@ namespace Tori {
             const PiecePicker::BlockResult Result = _Picker->Received(Block);
             if (Result == PiecePicker::BlockResult::Ignored) { return; }
 
-            _Storage->Write(static_cast<std::int64_t>(Block.Piece) * _Meta->PieceLength + Block.Offset, Message.Payload);
+            _Storage->Write(static_cast<std::int64_t>(Block.Piece) * _Meta->PieceLength + Block.Offset,
+                            Message.Payload);
             _WroteSinceStamp = true;
 
             // In endgame the same block may still be pending from other peers
@@ -1066,16 +1109,16 @@ namespace Tori {
             if (!_Picker) { return; }
             if (Message.Index >= static_cast<std::uint32_t>(PieceCount()) || Message.Length == 0 ||
                 Message.Length > kMaxRequestLength ||
-                static_cast<std::int64_t>(Message.Begin) + Message.Length > _Picker->PieceSize(static_cast<int>(Message.Index))) {
+                static_cast<std::int64_t>(Message.Begin) + Message.Length >
+                  _Picker->PieceSize(static_cast<int>(Message.Index))) {
                 return Drop(Target);
             }
             if (Target.AmChoking || !_Picker->Have().Get(static_cast<int>(Message.Index)) ||
                 Target.Requests.size() >= kMaxQueuedRequests) {
                 return;
             }
-            Target.Requests.push_back({static_cast<int>(Message.Index),
-                                       static_cast<int>(Message.Begin),
-                                       static_cast<int>(Message.Length)});
+            Target.Requests.push_back(
+              {static_cast<int>(Message.Index), static_cast<int>(Message.Begin), static_cast<int>(Message.Length)});
         }
 
         void ServeRequests(Peer& Target, const Clock::time_point Now) {
@@ -1084,11 +1127,15 @@ namespace Tori {
                 Target.Requests.pop_front();
 
                 _BlockBuffer.resize(static_cast<std::size_t>(Request.Length));
-                if (!_Storage->Read(static_cast<std::int64_t>(Request.Piece) * _Meta->PieceLength + Request.Offset, _BlockBuffer)) {
+                if (!_Storage->Read(static_cast<std::int64_t>(Request.Piece) * _Meta->PieceLength + Request.Offset,
+                                    _BlockBuffer)) {
                     continue;
                 }
                 ByteWriter Out;
-                EncodePiece(Out, static_cast<std::uint32_t>(Request.Piece), static_cast<std::uint32_t>(Request.Offset), _BlockBuffer);
+                EncodePiece(Out,
+                            static_cast<std::uint32_t>(Request.Piece),
+                            static_cast<std::uint32_t>(Request.Offset),
+                            _BlockBuffer);
                 SendTo(Target, Out, Now);
                 Target.Up.Add(Request.Length, Now);
                 _Up.Add(Request.Length, Now);
@@ -1134,7 +1181,9 @@ namespace Tori {
             }
 
             const std::vector<bool> Unchoke = _Choker.Decide(Candidates, _State == TorrentState::Seeding, Now);
-            for (std::size_t I = 0; I < Active.size(); ++I) { SetChoked(*Active[I], !Unchoke[I], Now); }
+            for (std::size_t I = 0; I < Active.size(); ++I) {
+                SetChoked(*Active[I], !Unchoke[I], Now);
+            }
         }
 
         // ---- Housekeeping --------------------------------------------------------------------------------------
@@ -1187,7 +1236,8 @@ namespace Tori {
             }
             if (DhtAllowed() && Now >= _NextDhtLookup) {
                 _Params.FindPeers(_Params.Hash, _Params.ListenPort);
-                _NextDhtLookup = Now + (!_Meta || ActivePeerCount() < kHungryPeerCount ? kDhtLookupHungry : kDhtLookupSatisfied);
+                _NextDhtLookup =
+                  Now + (!_Meta || ActivePeerCount() < kHungryPeerCount ? kDhtLookupHungry : kDhtLookupSatisfied);
             }
             ConnectToCandidates(Now);
         }
@@ -1223,15 +1273,15 @@ namespace Tori {
         std::int64_t _WantedBytes   = 0;  // Size of the pieces the chosen files cover
         std::int64_t _WantedDone    = 0;  // ...and how much of that is verified
         std::vector<int> _SkippedFiles;
-        std::int64_t _CheckedBytes  = 0;
-        std::uint32_t _Key          = 0;
+        std::int64_t _CheckedBytes = 0;
+        std::uint32_t _Key         = 0;
 
         // Resume data
         std::int64_t _PriorUploaded   = 0;  // Totals from earlier runs
         std::int64_t _PriorDownloaded = 0;
         bool _PiecesKnown             = false;  // The picker's pieces come from a finished check or fast resume
         bool _WroteSinceStamp         = false;
-        bool _ResumeUrgent            = true;   // Publish on the first loop pass
+        bool _ResumeUrgent            = true;  // Publish on the first loop pass
         std::vector<FileStamp> _Stamps;
         std::tuple<int, std::int64_t, std::int64_t, bool, bool> _LastResumeKey {};
         Clock::time_point _NextResume {};

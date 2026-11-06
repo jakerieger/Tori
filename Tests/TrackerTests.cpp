@@ -1,6 +1,7 @@
 #include "Core/Bencode.hpp"
 #include "Core/ByteIO.hpp"
 #include "Core/PeerId.hpp"
+#include "Core/Version.hpp"
 #include "Net/Endpoint.hpp"
 #include "Net/Socket.hpp"
 #include "Tracker/Announcer.hpp"
@@ -270,7 +271,8 @@ namespace {
 
 TEST_CASE("PeerId has the Tori prefix and printable random part") {
     const PeerId Id = GeneratePeerId();
-    CHECK(std::string_view(reinterpret_cast<const char*>(Id.data()), 8) == "-TO0100-");
+    CHECK(std::string_view(reinterpret_cast<const char*>(Id.data()), 8) ==
+          std::string_view(kPeerIdPrefix.data(), kPeerIdPrefix.size()));
     CHECK(std::ranges::all_of(Id, [](const std::uint8_t C) { return std::isalnum(C) || C == '-'; }));
     CHECK(GeneratePeerId() != Id);
 }
@@ -287,7 +289,10 @@ TEST_CASE("DescribePeerId names Azureus-style clients") {
     CHECK(DescribePeerId(Id("-LT2A00-")) == "libtorrent 2.10");  // Letters count on from 10
     CHECK(DescribePeerId(Id("-ZZ1000-")) == "ZZ 1");
     CHECK(DescribePeerId(Id("M7-4-3--")).empty());  // Mainline style isn't decoded
-    CHECK(DescribePeerId(GeneratePeerId()) == "Tori 0.1");
+    // Our own ID reads back as our version, less the trailing zero parts the peer ID format can't tell apart
+    std::string Ours = std::format("Tori {}.{}.{}", kVersionMajor, kVersionMinor, kVersionPatch);
+    while (Ours.size() > 7 && Ours.ends_with(".0")) { Ours.resize(Ours.size() - 2); }
+    CHECK(DescribePeerId(GeneratePeerId()) == Ours);
 }
 
 TEST_CASE("Endpoint parses and formats addresses") {
@@ -327,7 +332,7 @@ TEST_CASE("BuildAnnounceUrl adds escaped BEP 3 parameters") {
 
     const std::string Url = BuildAnnounceUrl("http://t.example/announce", Request);
     CHECK(Url.starts_with("http://t.example/announce?info_hash=%00%01%02%03"));
-    CHECK(Url.find("&peer_id=-TO0100-") != std::string::npos);
+    CHECK(Url.find("&peer_id=" + std::string(kPeerIdPrefix.data(), kPeerIdPrefix.size())) != std::string::npos);
     CHECK(Url.find("&port=6881&uploaded=10&downloaded=20&left=30&compact=1&numwant=33&key=deadbeef") !=
           std::string::npos);
     CHECK(Url.find("&event=started") != std::string::npos);

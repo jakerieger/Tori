@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Engine/ResumeData.hpp"
 
 #include "Core/Bencode.hpp"
@@ -32,12 +46,15 @@ namespace Tori {
         }
     }  // namespace
 
-    std::vector<FileStamp> StampFiles(const std::filesystem::path& Destination, const std::span<const TorrentFile> Files) {
+    std::vector<FileStamp> StampFiles(const std::filesystem::path& Destination,
+                                      const std::span<const TorrentFile> Files) {
         std::vector<FileStamp> Stamps(Files.size());
         for (std::size_t I = 0; I < Files.size(); ++I) {
             if (Files[I].IsPadding) { continue; }
             WIN32_FILE_ATTRIBUTE_DATA Attributes {};
-            if (!GetFileAttributesExW(LongPath(Destination / Files[I].Path).c_str(), GetFileExInfoStandard, &Attributes) ||
+            if (!GetFileAttributesExW(LongPath(Destination / Files[I].Path).c_str(),
+                                      GetFileExInfoStandard,
+                                      &Attributes) ||
                 (Attributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
                 continue;
             }
@@ -66,7 +83,8 @@ namespace Tori {
 
         return Bencode::Encode(Bencode::Dict {
           {"version", kVersion},
-          {"info hash", std::string_view(reinterpret_cast<const char*>(Data.Hash.Bytes.data()), Data.Hash.Bytes.size())},
+          {"info hash",
+           std::string_view(reinterpret_cast<const char*>(Data.Hash.Bytes.data()), Data.Hash.Bytes.size())},
           {"name", Data.Name},
           {"destination", PathToUtf8(Data.Destination)},
           {"trackers", std::move(Tiers)},
@@ -98,7 +116,9 @@ namespace Tori {
         if (const Bencode::List* Tiers = Root.FindList("trackers")) {
             for (const Bencode::Value& Tier : *Tiers) {
                 std::vector<std::string>& Urls = Data.ExtraTrackers.emplace_back();
-                for (const Bencode::Value& Url : Tier.AsList()) { Urls.push_back(Url.AsString()); }
+                for (const Bencode::Value& Url : Tier.AsList()) {
+                    Urls.push_back(Url.AsString());
+                }
             }
         }
 
@@ -109,7 +129,9 @@ namespace Tori {
         Data.Position   = RequireInteger(Root, "position");
 
         if (const Bencode::List* Skipped = Root.FindList("skipped files")) {
-            for (const Bencode::Value& Index : *Skipped) { Data.SkippedFiles.push_back(static_cast<int>(Index.AsInteger())); }
+            for (const Bencode::Value& Index : *Skipped) {
+                Data.SkippedFiles.push_back(static_cast<int>(Index.AsInteger()));
+            }
         }
 
         const std::string& Pieces = RequireString(Root, "pieces");

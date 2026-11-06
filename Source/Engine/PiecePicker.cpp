@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Engine/PiecePicker.hpp"
 
 #include "Core/Random.hpp"
@@ -7,14 +21,11 @@
 
 namespace Tori {
     PiecePicker::PiecePicker(const int PieceCount, const std::int64_t PieceLength, const std::int64_t TotalSize)
-        : _PieceCount(PieceCount),
-          _PieceLength(PieceLength),
-          _TotalSize(TotalSize),
-          _Have(PieceCount),
-          _Wanted(PieceCount),
-          _Availability(static_cast<std::size_t>(PieceCount), 0),
-          _Random(RandomU32()) {
-        for (int Piece = 0; Piece < PieceCount; ++Piece) { _Wanted.Set(Piece); }
+        : _PieceCount(PieceCount), _PieceLength(PieceLength), _TotalSize(TotalSize), _Have(PieceCount),
+          _Wanted(PieceCount), _Availability(static_cast<std::size_t>(PieceCount), 0), _Random(RandomU32()) {
+        for (int Piece = 0; Piece < PieceCount; ++Piece) {
+            _Wanted.Set(Piece);
+        }
     }
 
     void PiecePicker::SetWanted(const Bitfield& Wanted) {
@@ -77,9 +88,8 @@ namespace Tori {
         return std::ranges::find(Requests, Block) != Requests.end();
     }
 
-    std::vector<BlockRequest> PiecePicker::Pick(const Bitfield& PeerHas,
-                                                const int Count,
-                                                const std::span<const BlockRequest> PeerOutstanding) {
+    std::vector<BlockRequest>
+    PiecePicker::Pick(const Bitfield& PeerHas, const int Count, const std::span<const BlockRequest> PeerOutstanding) {
         std::vector<BlockRequest> Picks;
         if (Count <= 0 || _PieceCount == 0) { return Picks; }
 
@@ -88,8 +98,9 @@ namespace Tori {
                 if (static_cast<int>(Picks.size()) >= Count) { return; }
                 if (Entry.Received[Block]) { continue; }
 
-                const BlockRequest Request {
-                  Piece, static_cast<int>(Block) * kBlockSize, BlockLength(Piece, static_cast<int>(Block))};
+                const BlockRequest Request {Piece,
+                                            static_cast<int>(Block) * kBlockSize,
+                                            BlockLength(Piece, static_cast<int>(Block))};
                 const bool Free = Entry.Requests[Block] == 0;
                 if (Free || (Duplicates && !Contains(PeerOutstanding, Request))) {
                     ++Entry.Requests[Block];
@@ -144,8 +155,8 @@ namespace Tori {
         const auto It = _Partial.find(Block.Piece);
         if (It == _Partial.end()) { return BlockResult::Ignored; }
 
-        Partial& Entry   = It->second;
-        const int Index  = Block.Offset / kBlockSize;
+        Partial& Entry  = It->second;
+        const int Index = Block.Offset / kBlockSize;
         if (Index >= static_cast<int>(Entry.Received.size()) || Block.Length != BlockLength(Block.Piece, Index) ||
             Entry.Received[static_cast<std::size_t>(Index)]) {
             return BlockResult::Ignored;
@@ -154,7 +165,7 @@ namespace Tori {
         Entry.Received[static_cast<std::size_t>(Index)] = true;
         ++Entry.ReceivedCount;
         return Entry.ReceivedCount == static_cast<int>(Entry.Received.size()) ? BlockResult::PieceComplete
-                                                                               : BlockResult::Accepted;
+                                                                              : BlockResult::Accepted;
     }
 
     void PiecePicker::PieceVerified(const int Piece) {

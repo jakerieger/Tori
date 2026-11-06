@@ -2,5 +2,9 @@
 
 // The first icon is the one Explorer shows for Tori.exe
 IDI_TORI ICON "icon.ico"
-
 IDR_LOGO RCDATA "logo.svg"
+
+#define TORI_FILE_DESCRIPTION  "Tori"
+#define TORI_ORIGINAL_FILENAME "Tori.exe"
+#define TORI_FILE_TYPE         VFT_APP
+#include "VersionInfo.rc"

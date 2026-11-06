@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #pragma once
 
 #include "Core/Bitfield.hpp"
@@ -48,13 +62,14 @@ namespace Tori {
 
         /// @brief Up to Count blocks to request from a peer, marked as requested. PeerOutstanding lists what that
         /// peer already has pending, so endgame never asks one peer for the same block twice.
-        std::vector<BlockRequest> Pick(const Bitfield& PeerHas, int Count, std::span<const BlockRequest> PeerOutstanding);
+        std::vector<BlockRequest>
+        Pick(const Bitfield& PeerHas, int Count, std::span<const BlockRequest> PeerOutstanding);
 
         /// @brief A request was dropped (choke, disconnect, timeout); the block can be handed out again.
         void Abort(const BlockRequest& Block);
 
         enum class BlockResult {
-            Ignored,        // Not a block we still need: duplicate, unknown, or malformed
+            Ignored,  // Not a block we still need: duplicate, unknown, or malformed
             Accepted,
             PieceComplete,  // Accepted, and the piece now has every block; verify it next
         };

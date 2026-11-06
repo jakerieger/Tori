@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "Meta/Metainfo.hpp"
 
 #include "Core/Bencode.hpp"
@@ -232,7 +246,9 @@ namespace Tori {
         }
 
         // Windows silently strips trailing dots and spaces, which would let two entries collide
-        while (!Out.empty() && (Out.back() == '.' || Out.back() == ' ')) { Out.pop_back(); }
+        while (!Out.empty() && (Out.back() == '.' || Out.back() == ' ')) {
+            Out.pop_back();
+        }
         if (Out.empty()) { return "_"; }
 
         // Device names are reserved with or without an extension ("CON", "con.txt")
@@ -241,8 +257,8 @@ namespace Tori {
             return C >= 'a' && C <= 'z' ? static_cast<char>(C - 'a' + 'A') : C;
         });
         constexpr std::array<std::string_view, 4> kReserved = {"CON", "PRN", "AUX", "NUL"};
-        const bool IsNumberedDevice = Stem.size() == 4 && (Stem.starts_with("COM") || Stem.starts_with("LPT")) &&
-                                      Stem[3] >= '1' && Stem[3] <= '9';
+        const bool IsNumberedDevice =
+          Stem.size() == 4 && (Stem.starts_with("COM") || Stem.starts_with("LPT")) && Stem[3] >= '1' && Stem[3] <= '9';
         if (IsNumberedDevice || std::ranges::find(kReserved, Stem) != kReserved.end()) { Out.insert(0, "_"); }
 
         return Out;

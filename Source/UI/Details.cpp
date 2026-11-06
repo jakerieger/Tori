@@ -1,3 +1,17 @@
+// Copyright 2026 Jake Rieger
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "UI/Details.hpp"
 
 #include "Core/Format.hpp"
@@ -11,7 +25,8 @@ namespace Tori::UI {
     using namespace XenUI;
 
     namespace {
-        Node CellLabel(const Theme& Style, std::string Content, const TextAlignment Alignment = TextAlignment::Leading) {
+        Node
+        CellLabel(const Theme& Style, std::string Content, const TextAlignment Alignment = TextAlignment::Leading) {
             return Text {
               .Content   = std::move(Content),
               .Font      = Style.BodyFont,
@@ -37,7 +52,9 @@ namespace Tori::UI {
         std::string DisplayPath(const TorrentDetails& Details, const FileDetails& File) {
             if (Details.Files.size() <= 1) { return PathToUtf8(File.Path); }
             std::filesystem::path Inner;
-            for (auto It = std::next(File.Path.begin()); It != File.Path.end(); ++It) { Inner /= *It; }
+            for (auto It = std::next(File.Path.begin()); It != File.Path.end(); ++It) {
+                Inner /= *It;
+            }
             return PathToUtf8(Inner);
         }
 
@@ -63,29 +80,33 @@ namespace Tori::UI {
                 {
                   TableColumn {.Title = "", .Width = 36.0f, .MinWidth = 36.0f, .Sortable = false},
                   TableColumn {.Title = "Name", .Width = 280.0f, .Sortable = false},
-                  TableColumn {.Title = "Size", .Width = 90.0f, .Alignment = TextAlignment::Trailing, .Sortable = false},
+                  TableColumn {.Title     = "Size",
+                               .Width     = 90.0f,
+                               .Alignment = TextAlignment::Trailing,
+                               .Sortable  = false},
                   TableColumn {.Title = "Done", .Alignment = TextAlignment::Trailing, .Sortable = false},
                 },
-              .RowCount = static_cast<int>(Details->Files.size()),
-              .CellBuilder =
-                [State, Details, Style](const int Row, const int Column) -> Node {
-                    const FileDetails& File = Details->Files[static_cast<std::size_t>(Row)];
-                    switch (Column) {
-                        case 0:
-                            return Checkbox {
-                              .Value     = File.Wanted,
-                              .OnChanged = [State, Index = File.Index](const bool On) { SetWanted(State, Index, On); },
-                            };
-                        case 1:
-                            return CellLabel(Style, DisplayPath(*Details, File));
-                        case 2:
-                            return CellLabel(Style, FormatBytes(static_cast<double>(File.Size)), TextAlignment::Trailing);
-                        default:
-                            return CellLabel(Style,
-                                             Percent(File.Size > 0 ? static_cast<double>(File.Done) / static_cast<double>(File.Size) : 1.0),
-                                             TextAlignment::Trailing);
-                    }
-                },
+              .RowCount    = static_cast<int>(Details->Files.size()),
+              .CellBuilder = [State, Details, Style](const int Row, const int Column) -> Node {
+                  const FileDetails& File = Details->Files[static_cast<std::size_t>(Row)];
+                  switch (Column) {
+                      case 0:
+                          return Checkbox {
+                            .Value     = File.Wanted,
+                            .OnChanged = [State, Index = File.Index](const bool On) { SetWanted(State, Index, On); },
+                          };
+                      case 1:
+                          return CellLabel(Style, DisplayPath(*Details, File));
+                      case 2:
+                          return CellLabel(Style, FormatBytes(static_cast<double>(File.Size)), TextAlignment::Trailing);
+                      default:
+                          return CellLabel(Style,
+                                           Percent(File.Size > 0
+                                                     ? static_cast<double>(File.Done) / static_cast<double>(File.Size)
+                                                     : 1.0),
+                                           TextAlignment::Trailing);
+                  }
+              },
               .Label = "Files",
             };
         }
@@ -98,33 +119,45 @@ namespace Tori::UI {
                   TableColumn {.Title = "Address", .Width = 150.0f, .Sortable = false},
                   TableColumn {.Title = "Client", .Width = 130.0f, .Sortable = false},
                   TableColumn {.Title = "Has", .Width = 60.0f, .Alignment = TextAlignment::Trailing, .Sortable = false},
-                  TableColumn {.Title = "Down", .Width = 80.0f, .Alignment = TextAlignment::Trailing, .Sortable = false},
+                  TableColumn {.Title     = "Down",
+                               .Width     = 80.0f,
+                               .Alignment = TextAlignment::Trailing,
+                               .Sortable  = false},
                   TableColumn {.Title = "Up", .Width = 80.0f, .Alignment = TextAlignment::Trailing, .Sortable = false},
                   TableColumn {.Title = "Flags", .Sortable = false},
                 },
               .RowCount = static_cast<int>(Details->Peers.size()),
-              .CellText =
-                [Details](const int Row, const int Column) -> std::string {
-                    const PeerDetails& Peer = Details->Peers[static_cast<std::size_t>(Row)];
-                    switch (Column) {
-                        case 0: return Peer.Address;
-                        case 1: return Peer.Client;
-                        case 2: return Percent(Peer.Progress);
-                        case 3: return Peer.DownloadSpeed > 0.0 ? FormatRate(Peer.DownloadSpeed) : std::string {};
-                        case 4: return Peer.UploadSpeed > 0.0 ? FormatRate(Peer.UploadSpeed) : std::string {};
-                        default: return Peer.Flags;
-                    }
-                },
+              .CellText = [Details](const int Row, const int Column) -> std::string {
+                  const PeerDetails& Peer = Details->Peers[static_cast<std::size_t>(Row)];
+                  switch (Column) {
+                      case 0:
+                          return Peer.Address;
+                      case 1:
+                          return Peer.Client;
+                      case 2:
+                          return Percent(Peer.Progress);
+                      case 3:
+                          return Peer.DownloadSpeed > 0.0 ? FormatRate(Peer.DownloadSpeed) : std::string {};
+                      case 4:
+                          return Peer.UploadSpeed > 0.0 ? FormatRate(Peer.UploadSpeed) : std::string {};
+                      default:
+                          return Peer.Flags;
+                  }
+              },
               .Label = "Peers",
             };
         }
 
         std::string TrackerStateText(const TrackerStatus& Tracker) {
             switch (Tracker.State) {
-                case TrackerState::NotContacted: return "Not contacted";
-                case TrackerState::Announcing: return "Announcing...";
-                case TrackerState::Working: return Tracker.Message.empty() ? "Working" : "Working: " + Tracker.Message;
-                case TrackerState::Failed: return Tracker.Message.empty() ? "Failed" : Tracker.Message;
+                case TrackerState::NotContacted:
+                    return "Not contacted";
+                case TrackerState::Announcing:
+                    return "Announcing...";
+                case TrackerState::Working:
+                    return Tracker.Message.empty() ? "Working" : "Working: " + Tracker.Message;
+                case TrackerState::Failed:
+                    return Tracker.Message.empty() ? "Failed" : Tracker.Message;
             }
             return {};
         }
@@ -132,9 +165,11 @@ namespace Tori::UI {
         std::string NextAnnounceText(const TrackerStatus& Tracker) {
             if (!Tracker.NextAnnounce) { return {}; }
             const auto Seconds =
-              std::chrono::duration_cast<std::chrono::seconds>(*Tracker.NextAnnounce - std::chrono::steady_clock::now()).count();
+              std::chrono::duration_cast<std::chrono::seconds>(*Tracker.NextAnnounce - std::chrono::steady_clock::now())
+                .count();
             if (Seconds <= 0) { return "now"; }
-            return Seconds < 60 ? std::format("in {}s", Seconds) : std::format("in {}m {:02}s", Seconds / 60, Seconds % 60);
+            return Seconds < 60 ? std::format("in {}s", Seconds)
+                                : std::format("in {}m {:02}s", Seconds / 60, Seconds % 60);
         }
 
         Node TrackersTab(const Theme& Style, const std::shared_ptr<const TorrentDetails>& Details) {
@@ -144,35 +179,42 @@ namespace Tori::UI {
                 {
                   TableColumn {.Title = "URL", .Width = 230.0f, .Sortable = false},
                   TableColumn {.Title = "Status", .Width = 170.0f, .Sortable = false},
-                  TableColumn {.Title = "Seeds / Peers", .Width = 100.0f, .Alignment = TextAlignment::Trailing, .Sortable = false},
+                  TableColumn {.Title     = "Seeds / Peers",
+                               .Width     = 100.0f,
+                               .Alignment = TextAlignment::Trailing,
+                               .Sortable  = false},
                   TableColumn {.Title = "Next", .Alignment = TextAlignment::Trailing, .Sortable = false},
                 },
               .RowCount = static_cast<int>(Details->Trackers.size()),
-              .CellText =
-                [Details](const int Row, const int Column) -> std::string {
-                    const TrackerStatus& Tracker = Details->Trackers[static_cast<std::size_t>(Row)];
-                    switch (Column) {
-                        case 0: return Tracker.Url;
-                        case 1: return TrackerStateText(Tracker);
-                        case 2:
-                            if (!Tracker.Seeders && !Tracker.Leechers) { return {}; }
-                            return std::format("{} / {}",
-                                               Tracker.Seeders ? std::to_string(*Tracker.Seeders) : "?",
-                                               Tracker.Leechers ? std::to_string(*Tracker.Leechers) : "?");
-                        default: return NextAnnounceText(Tracker);
-                    }
-                },
+              .CellText = [Details](const int Row, const int Column) -> std::string {
+                  const TrackerStatus& Tracker = Details->Trackers[static_cast<std::size_t>(Row)];
+                  switch (Column) {
+                      case 0:
+                          return Tracker.Url;
+                      case 1:
+                          return TrackerStateText(Tracker);
+                      case 2:
+                          if (!Tracker.Seeders && !Tracker.Leechers) { return {}; }
+                          return std::format("{} / {}",
+                                             Tracker.Seeders ? std::to_string(*Tracker.Seeders) : "?",
+                                             Tracker.Leechers ? std::to_string(*Tracker.Leechers) : "?");
+                      default:
+                          return NextAnnounceText(Tracker);
+                  }
+              },
               .Label = "Trackers",
             };
         }
     }  // namespace
 
     Node DetailsPane::Build(BuildContext& Context) const {
-        const Theme& Style       = Theme::Of(Context);
-        const TorrentId Selected = State->SelectedTorrent();
+        const Theme& Style                                  = Theme::Of(Context);
+        const TorrentId Selected                            = State->SelectedTorrent();
         const std::shared_ptr<const TorrentDetails> Details = State->Details();
 
-        if (Selected == kInvalidTorrentId) { return Message(Style, "Select a torrent to see its files, peers and trackers."); }
+        if (Selected == kInvalidTorrentId) {
+            return Message(Style, "Select a torrent to see its files, peers and trackers.");
+        }
         if (!Details || Details->Id != Selected) { return Message(Style, "Loading..."); }
 
         return Container {
@@ -181,9 +223,11 @@ namespace Tori::UI {
             TabView {
               .Tabs =
                 {
-                  Tab {.Label = std::format("Files ({})", Details->Files.size()), .Content = FilesTab(State, Style, Details)},
+                  Tab {.Label   = std::format("Files ({})", Details->Files.size()),
+                       .Content = FilesTab(State, Style, Details)},
                   Tab {.Label = std::format("Peers ({})", Details->Peers.size()), .Content = PeersTab(Style, Details)},
-                  Tab {.Label = std::format("Trackers ({})", Details->Trackers.size()), .Content = TrackersTab(Style, Details)},
+                  Tab {.Label   = std::format("Trackers ({})", Details->Trackers.size()),
+                       .Content = TrackersTab(Style, Details)},
                 },
               .Selected = &State->DetailsTab,
             },
